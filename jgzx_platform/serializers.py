@@ -110,14 +110,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     real_name = serializers.CharField(source='user.first_name', read_only=True)
     date_joined = serializers.DateTimeField(source='user.date_joined', read_only=True)
+    # ✅ 暴露 is_staff 字段
+    is_staff = serializers.BooleanField(source='user.is_staff', read_only=True)
 
     class Meta:
         model = UserProfile
         fields = ('id', 'username', 'real_name', 'identity', 'phone', 'department',
                   'avatar', 'bio', 'project_count', 'comment_count',
-                  'is_banned', 'date_joined', 'created_at', 'updated_at')
+                  'is_banned', 'date_joined', 'created_at', 'updated_at', 'is_staff')
         # 核心业务字段只读，防止通过该接口被篡改
-        read_only_fields = ('identity', 'project_count', 'comment_count', 'is_banned')
+        read_only_fields = ('identity', 'project_count', 'comment_count', 'is_banned', 'is_staff')
 
 
 # ==========================================

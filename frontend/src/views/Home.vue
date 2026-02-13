@@ -2,50 +2,50 @@
 <template>
   <div class="home">
     <el-container>
-      <el-header>
-        <div class="header-content">
-          <div class="logo">
-            <h2>JGZX 平台</h2>
-          </div>
-          <div class="user-info flex-center">
-            <span class="welcome">欢迎，{{ authStore.fullName }}</span>
-            <el-dropdown @command="handleCommand">
-              <el-avatar 
-                :size="32" 
-                :src="authStore.user?.avatar || undefined"
-                class="cursor-pointer"
-              >
-                {{ authStore.fullName?.charAt(0) || '用' }}
-              </el-avatar>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="profile">
-                    <el-icon><User /></el-icon>
-                    个人资料
-                  </el-dropdown-item>
-                  <el-dropdown-item command="changePassword">
-                    <el-icon><Lock /></el-icon>
-                    修改密码
-                  </el-dropdown-item>
-                  <el-dropdown-item v-if="authStore.isTeacher" command="createProject">
-                    <el-icon><Plus /></el-icon>
-                    发布项目
-                  </el-dropdown-item>
-                  <el-dropdown-item v-if="authStore.isAdmin" command="admin">
-                    <el-icon><Setting /></el-icon>
-                    管理后台
-                  </el-dropdown-item>
-                  <el-dropdown-item divided command="logout">
-                    <el-icon><SwitchButton /></el-icon>
-                    退出登录
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </div>
-      </el-header>
-      
+<!--      <el-header>-->
+<!--        <div class="header-content">-->
+<!--          <div class="logo">-->
+<!--            <h2>JGZX 平台</h2>-->
+<!--          </div>-->
+<!--          <div class="user-info flex-center">-->
+<!--            <span class="welcome">欢迎，{{ authStore.fullName }}</span>-->
+<!--            <el-dropdown @command="handleCommand">-->
+<!--              <el-avatar-->
+<!--                :size="32"-->
+<!--                :src="authStore.user?.avatar || undefined"-->
+<!--                class="cursor-pointer"-->
+<!--              >-->
+<!--                {{ authStore.fullName?.charAt(0) || '用' }}-->
+<!--              </el-avatar>-->
+<!--              <template #dropdown>-->
+<!--                <el-dropdown-menu>-->
+<!--                  <el-dropdown-item command="profile">-->
+<!--                    <el-icon><User /></el-icon>-->
+<!--                    个人资料-->
+<!--                  </el-dropdown-item>-->
+<!--                  <el-dropdown-item command="changePassword">-->
+<!--                    <el-icon><Lock /></el-icon>-->
+<!--                    修改密码-->
+<!--                  </el-dropdown-item>-->
+<!--                  <el-dropdown-item command="createProject">-->
+<!--                    <el-icon><Plus /></el-icon>-->
+<!--                    发布项目-->
+<!--                  </el-dropdown-item>-->
+<!--                  <el-dropdown-item v-if="authStore.isAdmin" command="admin">-->
+<!--                    <el-icon><Setting /></el-icon>-->
+<!--                    管理后台-->
+<!--                  </el-dropdown-item>-->
+<!--                  <el-dropdown-item divided command="logout">-->
+<!--                    <el-icon><SwitchButton /></el-icon>-->
+<!--                    退出登录-->
+<!--                  </el-dropdown-item>-->
+<!--                </el-dropdown-menu>-->
+<!--              </template>-->
+<!--            </el-dropdown>-->
+<!--          </div>-->
+<!--        </div>-->
+<!--      </el-header>-->
+
       <el-main>
         <el-card class="welcome-card" shadow="hover">
           <template #header>
@@ -54,7 +54,7 @@
               <el-tag type="success">最新</el-tag>
             </div>
           </template>
-          
+
           <el-result
             icon="success"
             :title="`欢迎回来，${authStore.fullName}`"
@@ -114,7 +114,7 @@ const handleLogout = async () => {
       cancelButtonText: '取消',
       type: 'info'
     })
-    
+
     await authStore.logout()
     router.push('/login')
   } catch (error) {

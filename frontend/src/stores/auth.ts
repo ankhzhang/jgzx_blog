@@ -19,9 +19,8 @@ export const useAuthStore = defineStore('auth', () => {
   const isStudent = computed(() => user.value?.identity === 'student')
   const isTeacher = computed(() => user.value?.identity === 'teacher')
   const isAdmin = computed(() => {
-    // 管理员判断：可以从用户信息或本地存储判断
-    // 暂时简单处理：教师身份且后端会返回管理员标记
-    return user.value?.identity === 'teacher' || localStorage.getItem('isAdmin') === 'true'
+    // 管理员判断：后端会返回管理员标记
+    return user.value?.is_staff === true
   })
   const fullName = computed(() => user.value?.real_name || user.value?.username || '')
 

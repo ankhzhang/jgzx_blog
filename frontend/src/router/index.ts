@@ -48,36 +48,20 @@ const routes = [
       requiresAuth: true  // 需要登录
     }
   },
-  // {
-  //   path: '/admin',
-  //   name: 'admin',
-  //   redirect: '/admin/users',
-  //   meta: {
-  //     title: '管理后台',
-  //     requiresAuth: true,
-  //     requiresAdmin: true  // 需要管理员权限
-  //   }
-  // },
-  // {
-  //   path: '/admin/users',
-  //   name: 'userList',
-  //   component: () => import('@/views/admin/UserList.vue'),
-  //   meta: {
-  //     title: '用户管理',
-  //     requiresAuth: true,
-  //     requiresAdmin: true  // 需要管理员权限
-  //   }
-  // },
-  // {
-  //   path: '/admin/users/:id',
-  //   name: 'userDetail',
-  //   component: () => import('@/views/admin/UserDetail.vue'),
-  //   meta: {
-  //     title: '用户详情',
-  //     requiresAuth: true,
-  //     requiresAdmin: true  // 需要管理员权限
-  //   }
-  // },
+  {
+  path: '/admin',
+  name: 'admin',
+  meta: {
+    title: '管理后台',
+    requiresAuth: true,
+    requiresAdmin: true
+  },
+  redirect: () => {
+    window.location.href = 'http://localhost:8000/admin/'
+    // 返回一个空路径，实际跳转由 window.location 处理
+    return { path: '/' }
+  }
+},
   {
     path: '/403',
     name: 'forbidden',

@@ -17,6 +17,7 @@ export interface UserProfile {
   date_joined: string   // 注册时间
   created_at: string    // 资料创建时间
   updated_at: string    // 资料更新时间
+  is_staff: boolean     // 是否为管理员
 }
 
 /**
