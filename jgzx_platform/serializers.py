@@ -1,8 +1,9 @@
 from django.db import transaction
+from django.utils import timezone
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from .models import UserProfile
+from .models import UserProfile, Project
 
 
 # ==========================================
@@ -174,3 +175,147 @@ class ChangePasswordSerializer(serializers.Serializer):
         if attrs['new_password'] != attrs['confirm_password']:
             raise serializers.ValidationError({"new_password": "两次新密码不一致"})
         return attrs
+
+
+# ==========================================
+# 项目发布模块 — 序列化器
+# ==========================================
+
+def _validate_skill_requirements(value, recruit_count):
+    """技能要求：支持 [{"desc":"...", "count": n}] 或 ["str", ...]"""
+    if not value:
+        return
+    if not isinstance(value, list):
+        raise serializers.ValidationError('技能要求必须是数组')
+    if len(value) > 10:
+        raise serializers.ValidationError('技能要求最多 10 条')
+    total = 0
+    for i, item in enumerate(value):
+        if isinstance(item, dict):
+            desc = item.get('desc') or item.get('text') or ''
+            cnt = item.get('count', 1)
+            if not isinstance(desc, str) or len(desc.strip()) == 0:
+                raise serializers.ValidationError(f'第 {i+1} 条描述不能为空')
+            if len(desc) > 100:
+                raise serializers.ValidationError(f'第 {i+1} 条描述不超过 100 字')
+            if not isinstance(cnt, int) or cnt < 1 or cnt > 10:
+                raise serializers.ValidationError(f'第 {i+1} 条人数须为 1–10')
+            total += cnt
+        elif isinstance(item, str):
+            s = (item or '').strip()
+            if len(s) == 0:
+                raise serializers.ValidationError(f'第 {i+1} 条不能为空')
+            if len(s) > 50:
+                raise serializers.ValidationError(f'第 {i+1} 条不超过 50 字')
+            total += 1
+        else:
+            raise serializers.ValidationError(f'第 {i+1} 条格式不正确')
+    if total > recruit_count:
+        raise serializers.ValidationError(
+            f'技能需求总人数({total})不能超过招募人数({recruit_count})'
+        )
+
+
+class ProjectListSerializer(serializers.ModelSerializer):
+    """项目列表（公开/我的）"""
+    publisher_name = serializers.CharField(source='publisher.first_name', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    publisher_role_display = serializers.CharField(source='get_publisher_role_display', read_only=True)
+
+    class Meta:
+        model = Project
+        fields = (
+            'id', 'title', 'category', 'category_display', 'status', 'status_display',
+            'publisher_role', 'publisher_role_display', 'publisher_name',
+            'recruit_count', 'deadline', 'created_at', 'published_at',
+            'is_visible_when_ended', 'version'
+        )
+
+
+class ProjectDetailSerializer(serializers.ModelSerializer):
+    """项目详情"""
+    publisher_id = serializers.IntegerField(source='publisher.id', read_only=True)
+    publisher_name = serializers.CharField(source='publisher.first_name', read_only=True)
+    publisher_username = serializers.CharField(source='publisher.username', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    publisher_role_display = serializers.CharField(source='get_publisher_role_display', read_only=True)
+
+    class Meta:
+        model = Project
+        fields = (
+            'id', 'publisher_id', 'publisher_name', 'publisher_username', 'publisher_role',
+            'publisher_role_display', 'title', 'description', 'category', 'category_display',
+            'status', 'status_display', 'recruit_count', 'skill_requirements', 'deadline',
+            'is_visible_when_ended', 'offline_reason', 'offline_at', 'reject_reason',
+            'submitted_at', 'published_at', 'created_at', 'updated_at', 'version'
+        )
+
+
+class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
+    """创建/更新项目（标题、描述、类别、招募人数、技能要求、截止时间、是否结束可见）"""
+    skill_requirements = serializers.JSONField(required=False, default=list)
+
+    class Meta:
+        model = Project
+        fields = (
+            'title', 'description', 'category', 'recruit_count',
+            'skill_requirements', 'deadline', 'is_visible_when_ended'
+        )
+
+    def validate_title(self, value):
+        s = (value or '').strip()
+        if len(s) == 0:
+            raise serializers.ValidationError('标题不能为空')
+        if len(s) > 100:
+            raise serializers.ValidationError('标题不超过 100 字')
+        return s
+
+    def validate_description(self, value):
+        s = (value or '').strip()
+        if len(s) < 100:
+            raise serializers.ValidationError('项目描述至少 100 字')
+        if len(s) > 5000:
+            raise serializers.ValidationError('项目描述不超过 5000 字')
+        return s
+
+    def validate_recruit_count(self, value):
+        if value is None:
+            raise serializers.ValidationError('招募人数必填')
+        if not isinstance(value, int) or value < 1 or value > 20:
+            raise serializers.ValidationError('招募人数须为 1–20')
+        return value
+
+    def validate_deadline(self, value):
+        if not value:
+            raise serializers.ValidationError('截止时间必填')
+        now = timezone.now()
+        if timezone.is_aware(value):
+            value = timezone.make_naive(value, timezone.get_current_timezone())
+        if timezone.is_aware(now):
+            now = timezone.make_naive(now, timezone.get_current_timezone())
+        if value <= now:
+            raise serializers.ValidationError('截止时间须大于当前时间')
+        return value
+
+    def validate(self, attrs):
+        recruit_count = attrs.get('recruit_count')
+        if recruit_count is None and self.instance:
+            recruit_count = self.instance.recruit_count
+        skill = attrs.get('skill_requirements')
+        if skill is not None:
+            _validate_skill_requirements(skill, recruit_count or 1)
+        return attrs
+
+
+class RejectBodySerializer(serializers.Serializer):
+    reject_reason = serializers.CharField(max_length=500, allow_blank=False)
+
+
+class OfflineBodySerializer(serializers.Serializer):
+    offline_reason = serializers.CharField(max_length=500, allow_blank=False)
+
+
+class CloseRecruitBodySerializer(serializers.Serializer):
+    target = serializers.ChoiceField(choices=['recruit_full', 'ended'])

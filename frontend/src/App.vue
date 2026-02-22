@@ -12,7 +12,6 @@
             <router-link to="/">首页</router-link>
             <router-link to="/profile">个人资料</router-link>
             <router-link to="/projects">项目</router-link>
-            <router-link v-if="authStore.isAdmin" to="/admin">管理</router-link>
           </div>
           <div class="user-info">
             <el-dropdown @command="handleCommand">
@@ -34,10 +33,6 @@
                     <el-icon><Plus /></el-icon>
                     发布项目
                   </el-dropdown-item>
-                  <el-dropdown-item v-if="authStore.isAdmin" command="admin">
-                    <el-icon><Setting /></el-icon>
-                    管理后台
-                  </el-dropdown-item>
                   <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -50,19 +45,45 @@
       </el-main>
     </el-container>
 
-    <!-- 未登录时只显示路由内容（登录页/注册页） -->
-    <router-view v-else />
+    <!-- 未登录：项目页显示简易顶栏 -->
+    <template v-else>
+      <el-container v-if="showGuestHeader" class="guest-container">
+        <el-header class="guest-header">
+          <div class="header-content guest-header-content">
+            <router-link to="/projects" class="logo">
+              <h2>JGZX 平台</h2>
+            </router-link>
+            <div class="guest-nav">
+              <router-link to="/projects">项目</router-link>
+              <router-link to="/login">登录</router-link>
+              <router-link to="/register">注册</router-link>
+            </div>
+          </div>
+        </el-header>
+        <el-main>
+          <router-view />
+        </el-main>
+      </el-container>
+      <router-view v-else />
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import {ArrowDown, Lock, Plus, Setting, User} from '@element-plus/icons-vue'
+import { computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ArrowDown, Lock, Plus, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessageBox } from 'element-plus'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
+
+const showGuestHeader = computed(() => {
+  const path = route.path
+  return path === '/projects' || path.startsWith('/projects/')
+})
 
 const handleCommand = async (command: string) => {
   if (command === 'logout') {
@@ -78,7 +99,12 @@ const handleCommand = async (command: string) => {
       // 用户取消操作
     }
   } else {
-    router.push(command)
+    const pathMap: Record<string, string> = {
+      profile: '/profile',
+      changePassword: '/change-password',
+      createProject: '/projects/create'
+    }
+    router.push(pathMap[command] || command)
   }
 }
 </script>
@@ -139,5 +165,41 @@ const handleCommand = async (command: string) => {
   flex: 1;
   background-color: #f5f7fa;
   padding: 20px;
+}
+
+.guest-container {
+  min-height: 100vh;
+}
+
+.guest-header {
+  background-color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  padding: 0 20px;
+}
+
+.guest-header .header-content.guest-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.guest-header .logo {
+  text-decoration: none;
+  color: inherit;
+}
+
+.guest-nav a {
+  margin-left: 16px;
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.guest-nav a:hover {
+  color: #409eff;
 }
 </style>
