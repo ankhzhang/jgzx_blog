@@ -149,5 +149,29 @@ export const authAPI = {
    */
   deleteUser(userId: number) {
     return api.delete(`/users/${userId}/`)
+  },
+
+  /**
+   * 12. 设置用户是否为管理员（仅超级管理员）
+   * POST /api/users/{user_id}/set-admin/
+   */
+  setUserAdmin(userId: number, isStaff: boolean) {
+    return api.post<UserProfile>(`/users/${userId}/set-admin/`, { is_staff: isStaff })
+  },
+
+  /**
+   * 13. 封禁用户（管理员）
+   * POST /api/users/{user_id}/ban/
+   */
+  banUser(userId: number, data: { ban_reason: string; banned_until?: string | null }) {
+    return api.post<UserProfile>(`/users/${userId}/ban/`, data)
+  },
+
+  /**
+   * 14. 解封用户（管理员）
+   * POST /api/users/{user_id}/unban/
+   */
+  unbanUser(userId: number) {
+    return api.post<UserProfile>(`/users/${userId}/unban/`)
   }
 }

@@ -45,7 +45,70 @@ const routes = [
     component: () => import('@/views/user/ChangePassword.vue'),
     meta: {
       title: '修改密码',
-      requiresAuth: true  // 需要登录
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/projects',
+    name: 'projects',
+    component: () => import('@/views/projects/ProjectList.vue'),
+    meta: {
+      title: '项目广场'
+    }
+  },
+  {
+    path: '/projects/create',
+    name: 'projectCreate',
+    component: () => import('@/views/projects/ProjectCreate.vue'),
+    meta: {
+      title: '发布项目',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/projects/my',
+    name: 'myProjects',
+    component: () => import('@/views/projects/MyProjects.vue'),
+    meta: {
+      title: '我的项目',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/projects/:id',
+    name: 'projectDetail',
+    component: () => import('@/views/projects/ProjectDetail.vue'),
+    meta: {
+      title: '项目详情'
+    }
+  },
+  {
+    path: '/projects/:id/edit',
+    name: 'projectEdit',
+    component: () => import('@/views/projects/ProjectEdit.vue'),
+    meta: {
+      title: '编辑项目',
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/manage/projects',
+    name: 'manageProjects',
+    component: () => import('@/views/projects/ManageProjects.vue'),
+    meta: {
+      title: '项目管理',
+      requiresAuth: true,
+      requiresAdmin: true
+    }
+  },
+  {
+    path: '/manage/users',
+    name: 'manageUsers',
+    component: () => import('@/views/admin/ManageUsers.vue'),
+    meta: {
+      title: '用户管理',
+      requiresAuth: true,
+      requiresAdmin: true
     }
   },
   {

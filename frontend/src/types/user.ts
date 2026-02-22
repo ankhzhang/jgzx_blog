@@ -14,6 +14,8 @@ export interface UserProfile {
   project_count: number  // 发布项目数
   comment_count: number  // 评论数
   is_banned: boolean    // 是否封禁
+  ban_reason?: string   // 封禁原因（仅管理员使用）
+  banned_until?: string | null // 封禁截止时间
   date_joined: string   // 注册时间
   created_at: string    // 资料创建时间
   updated_at: string    // 资料更新时间
