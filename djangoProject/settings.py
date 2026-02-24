@@ -76,8 +76,7 @@ ROOT_URLCONF = 'djangoProject.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates']
-        ,
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -102,8 +101,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'jgzx_platform',
-        'USER': 'djangoblog',
-        'PASSWORD': '123456',
+        'USER': 'root',
+        'PASSWORD': 'BESTRONG7822',
         'HOST': 'localhost',
         'PORT': '3306',
     }

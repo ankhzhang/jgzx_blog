@@ -1,0 +1,19 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static %}
+
+{% block object-tools-items %}
+    <li>
+        <a href="{% url 'admin:project_pending' %}" class="addlink" style="background: #ff9800;">
+            待审核项目 {% if pending_count > 0 %}({{ pending_count }}){% endif %}
+        </a>
+    </li>
+    {{ block.super }}
+{% endblock %}
+
+{% block search %}
+    {{ block.super }}
+    <div style="margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+        <strong>💡 提示：</strong>
+        使用搜索框可以按标题、内容、作者学号/姓名进行全局搜索，快速定位违规内容。
+    </div>
+{% endblock %}

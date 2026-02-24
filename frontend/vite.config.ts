@@ -63,7 +63,7 @@ export default defineConfig(({ mode }) => {  // 改为函数形式以获取环�
       port: 5173,
       proxy: {
         '/api': {
-          target: env.VITE_API_BASE_URL || 'http://localhost:8000',
+          target: env.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '/api')
         }
