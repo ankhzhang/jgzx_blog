@@ -79,6 +79,19 @@ const routes = [
     meta: { title: '编辑项目', requiresAuth: true }
   },
   {
+    path: '/admin',
+    name: 'admin',
+    meta: {
+      title: '管理后台',
+      requiresAuth: true,
+      requiresAdmin: true
+    },
+    redirect: () => {
+      window.location.href = 'http://localhost:8000/admin/'
+      return { path: '/' }
+    }
+  },
+  {
     path: '/403',
     name: 'forbidden',
     component: () => import('@/views/errors/Forbidden.vue'),

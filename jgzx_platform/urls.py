@@ -6,6 +6,7 @@ from . import projectviews
 router = DefaultRouter()
 
 urlpatterns = [
+    # 用户与认证
     path('register/', userviews.RegisterView.as_view(), name='user-register'),
     path('login/', userviews.LoginView.as_view(), name='user-login'),
     path('logout/', userviews.LogoutView.as_view(), name='user-logout'),

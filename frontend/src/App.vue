@@ -12,6 +12,7 @@
             <router-link to="/">首页</router-link>
             <router-link to="/profile">个人资料</router-link>
             <router-link to="/projects">项目</router-link>
+            <router-link v-if="authStore.isAdmin" to="/admin">管理</router-link>
           </div>
           <div class="user-info">
             <el-dropdown @command="handleCommand">
@@ -32,6 +33,10 @@
                   <el-dropdown-item command="createProject">
                     <el-icon><Plus /></el-icon>
                     发布项目
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="authStore.isAdmin" command="admin">
+                    <el-icon><OfficeBuilding /></el-icon>
+                    管理后台
                   </el-dropdown-item>
                   <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
                 </el-dropdown-menu>
@@ -72,7 +77,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ArrowDown, Lock, Plus, User } from '@element-plus/icons-vue'
+import { ArrowDown, Lock, OfficeBuilding, Plus, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessageBox } from 'element-plus'
 
@@ -102,7 +107,8 @@ const handleCommand = async (command: string) => {
     const pathMap: Record<string, string> = {
       profile: '/profile',
       changePassword: '/change-password',
-      createProject: '/projects/create'
+      createProject: '/projects/create',
+      admin: '/admin'
     }
     router.push(pathMap[command] || command)
   }
