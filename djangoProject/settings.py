@@ -11,6 +11,15 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+
+# 加载 .env 文件中的环境变量（如果存在）
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # 如果没有安装 python-dotenv，跳过（使用系统环境变量）
+    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,12 +28,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ddxy5^g2@lcj4wiw1_$#l@du^)9)sjvez&&sg$ac^u=b@8r0r-'
+# 从环境变量读取 SECRET_KEY，如果没有则使用默认值（仅用于开发环境）
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-ddxy5^g2@lcj4wiw1_$#l@du^)9)sjvez&&sg$ac^u=b@8r0r-'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# runserver 开发：允许本机访问；生产环境请改为具体域名
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Application definition
 
@@ -59,6 +73,12 @@ CORS_ALLOW_ALL_ORIGINS = True
 #     "http://localhost:5173",
 #     "http://127.0.0.1:5173",
 # ]
+
+# 前后端分离下，允许本地开发前端作为可信 CSRF 来源
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -101,11 +121,11 @@ DATABASES = {
     # }
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'jgzx_platform',
-        'USER': 'djangoblog',
-        'PASSWORD': '123456',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': os.environ.get('DB_NAME', 'jgzx_platform'),
+        'USER': os.environ.get('DB_USER', 'jgzx_platform'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'kc210957'),  # 默认值仅用于开发，生产环境必须设置环境变量
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
     }
 }
 

@@ -58,7 +58,7 @@
           <el-result
             icon="success"
             :title="`欢迎回来，${authStore.fullName}`"
-            :sub-title="`您是${authStore.isStudent ? '学生' : '教师'}身份`"
+            :sub-title="`您是${authStore.isAdmin ? '管理员' : authStore.isStudent ? '学生' : '教师'}身份`"
           >
             <template #extra>
               <el-button type="primary" @click="goToProfile">
@@ -69,6 +69,40 @@
               </el-button>
             </template>
           </el-result>
+        </el-card>
+
+        <el-card class="category-card" shadow="never">
+          <template #header>
+            <div class="card-header flex-between">
+              <h3>项目分类目录</h3>
+            </div>
+          </template>
+          <el-row :gutter="16">
+            <el-col :xs="24" :sm="12" :md="6">
+              <div class="category-item" @click="goToCategory('teacher_research')">
+                <h4>教师科研项目</h4>
+                <p>教师主导的科研课题，适合想深入科研方向的同学。</p>
+              </div>
+            </el-col>
+            <el-col :xs="24" :sm="12" :md="6">
+              <div class="category-item" @click="goToCategory('subject_competition')">
+                <h4>学科竞赛</h4>
+                <p>各类学科竞赛项目，适合准备竞赛和冲奖项的同学。</p>
+              </div>
+            </el-col>
+            <el-col :xs="24" :sm="12" :md="6">
+              <div class="category-item" @click="goToCategory('innovation_innov')">
+                <h4>大创项目-创新类</h4>
+                <p>以创新实践为主的大创项目，偏学术与技术探索。</p>
+              </div>
+            </el-col>
+            <el-col :xs="24" :sm="12" :md="6">
+              <div class="category-item" @click="goToCategory('innovation_venture')">
+                <h4>大创项目-创业类</h4>
+                <p>面向落地与商业化的创业方向大创项目。</p>
+              </div>
+            </el-col>
+          </el-row>
         </el-card>
       </el-main>
     </el-container>
@@ -130,6 +164,11 @@ const goToProfile = () => {
 // 跳转到项目列表
 const goToProjects = () => {
   router.push('/projects')
+}
+
+// 按类别跳转到项目列表
+const goToCategory = (category: 'teacher_research' | 'subject_competition' | 'innovation_innov' | 'innovation_venture') => {
+  router.push({ path: '/projects', query: { category } })
 }
 
 onMounted(() => {
@@ -195,9 +234,42 @@ onMounted(() => {
   box-shadow: var(--el-box-shadow);
 }
 
+.category-card {
+  margin-top: 20px;
+  border-radius: 8px;
+}
+
 .card-header h3 {
   margin: 0;
   font-size: 16px;
   color: var(--el-text-color-primary);
+}
+
+.category-item {
+  border-radius: 8px;
+  padding: 16px;
+  background-color: var(--el-fill-color-light);
+  cursor: pointer;
+  transition: all 0.2s;
+  height: 100%;
+}
+
+.category-item:hover {
+  background-color: var(--el-color-primary-light-9);
+  transform: translateY(-2px);
+  box-shadow: var(--el-box-shadow-light);
+}
+
+.category-item h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--el-text-color-primary);
+}
+
+.category-item p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.6;
 }
 </style>
