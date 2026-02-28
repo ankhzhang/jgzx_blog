@@ -4,7 +4,6 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from .models import UserProfile, Project, Comment
-from .models import UserProfile, Project
 
 
 # ==========================================
@@ -188,7 +187,6 @@ class ChangePasswordSerializer(serializers.Serializer):
 # 项目发布模块 — 序列化器
 # ==========================================
 
-
 def _validate_skill_requirements(value, recruit_count):
     """技能要求：支持 [{"desc":"...", "count": n}] 或 ["str", ...]"""
     if not value:
@@ -237,8 +235,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
             'id', 'title', 'category', 'category_display', 'status', 'status_display',
             'publisher_role', 'publisher_role_display', 'publisher_name',
             'recruit_count', 'deadline', 'created_at', 'published_at',
-            'is_visible_when_ended', 'tags', 'version'
-            'is_visible_when_ended', 'version'
+            'is_visible_when_ended', 'tags', 'version'  # ← 保留你的 tags
         )
 
 
@@ -256,8 +253,7 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'publisher_id', 'publisher_name', 'publisher_username', 'publisher_role',
             'publisher_role_display', 'title', 'description', 'category', 'category_display',
-            'status', 'status_display', 'recruit_count', 'skill_requirements', 'tags', 'deadline',
-            'status', 'status_display', 'recruit_count', 'skill_requirements', 'deadline',
+            'status', 'status_display', 'recruit_count', 'skill_requirements', 'tags', 'deadline',  # ← 保留你的 tags
             'is_visible_when_ended', 'offline_reason', 'offline_at', 'reject_reason',
             'submitted_at', 'published_at', 'created_at', 'updated_at', 'version'
         )
@@ -266,16 +262,13 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
 class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
     """创建/更新项目（标题、描述、类别、招募人数、技能要求、标签、截止时间、是否结束可见）"""
     skill_requirements = serializers.JSONField(required=False, default=list)
-    tags = serializers.JSONField(required=False, default=list)
-    """创建/更新项目（标题、描述、类别、招募人数、技能要求、截止时间、是否结束可见）"""
-    skill_requirements = serializers.JSONField(required=False, default=list)
+    tags = serializers.JSONField(required=False, default=list)  # ← 保留你的 tags
 
     class Meta:
         model = Project
         fields = (
             'title', 'description', 'category', 'recruit_count',
-            'skill_requirements', 'tags', 'deadline', 'is_visible_when_ended'
-            'skill_requirements', 'deadline', 'is_visible_when_ended'
+            'skill_requirements', 'tags', 'deadline', 'is_visible_when_ended'  # ← 保留你的 tags
         )
 
     def validate_title(self, value):
@@ -351,9 +344,6 @@ def _validate_tags(value):
         if s in seen:
             continue
         seen.add(s)
-
-
-        return attrs
 
 
 class RejectBodySerializer(serializers.Serializer):

@@ -71,6 +71,7 @@
               {{ typeof s === 'string' ? s : `${(s as { desc: string }).desc}（${(s as { count: number }).count} 人）` }}
             </li>
           </ul>
+          <!-- 你的标签展示 -->
           <div v-if="project.tags && project.tags.length" class="tags-row">
             <span class="tags-label">标签：</span>
             <el-tag
@@ -89,6 +90,7 @@
           </div>
         </div>
 
+        <!-- 你的评论模块 -->
         <el-divider />
 
         <div class="comments-section">
@@ -280,9 +282,6 @@ import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils'
 import type { ProjectDetail as IProjectDetail, SkillItem } from '@/types/project'
 import type { CommentItem } from '@/types/comment'
-import { useAuthStore } from '@/stores/auth'
-import { formatDate } from '@/utils'
-import type { ProjectDetail, SkillItem } from '@/types/project'
 
 const route = useRoute()
 const router = useRouter()
@@ -291,12 +290,12 @@ const authStore = useAuthStore()
 const loading = ref(true)
 const actionLoading = ref(false)
 const project = ref<IProjectDetail | null>(null)
-const project = ref<ProjectDetail | null>(null)
 const closeRecruitVisible = ref(false)
 const closeTarget = ref<'recruit_full' | 'ended'>('recruit_full')
 const visibilityVisible = ref(false)
 const visibilityValue = ref(true)
 
+// 你的评论相关变量
 const comments = ref<CommentItem[]>([])
 const newComment = ref('')
 const replyContent = ref<Record<number, string>>({})
@@ -335,7 +334,7 @@ async function fetchDetail() {
   try {
     const res = await projectAPI.getDetail(id)
     project.value = res.data
-    await fetchComments()
+    await fetchComments()  // 获取评论
   } catch {
     project.value = null
   } finally {
@@ -343,6 +342,7 @@ async function fetchDetail() {
   }
 }
 
+// 你的评论函数
 async function fetchComments() {
   const id = Number(route.params.id)
   if (!id) return
@@ -447,6 +447,7 @@ async function doRestore() {
   }
 }
 
+// 你的评论函数
 async function submitComment(parentId?: number) {
   if (!project.value) return
   if (!authStore.isAuthenticated) {

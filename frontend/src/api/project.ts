@@ -17,14 +17,11 @@ export const projectAPI = {
     if (params?.publisher_role) p.publisher_role = params.publisher_role
     if (params?.status) p.status = params.status
     if (params?.q) p.q = params.q
-    if (params?.tags) p.tags = params.tags
+    if (params?.tags) p.tags = params.tags  // ← 保留你的 tags 参数
     return api.get<ProjectListItem[]>(BASE + '/', { params: p })
   },
 
   /** 创建：POST /api/projects/ */
-    return api.get<ProjectListItem[]>(BASE + '/', { params: p })
-  },
-
   create(data: ProjectCreateUpdatePayload) {
     return api.post<ProjectDetail>(BASE + '/', data)
   },

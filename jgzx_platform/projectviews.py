@@ -69,6 +69,7 @@ class ProjectListCreateView(views.APIView, ProjectQuerysetMixin):
         publisher_role = request.query_params.get('publisher_role', '').strip()
         status_filter = request.query_params.get('status', '').strip()
         keyword = request.query_params.get('q', '').strip()
+        # 你的 tags 筛选参数
         tags_param = request.query_params.get('tags', '').strip()
 
         if mine:
@@ -87,6 +88,7 @@ class ProjectListCreateView(views.APIView, ProjectQuerysetMixin):
                 Q(title__icontains=keyword)
                 | Q(description__icontains=keyword)
             )
+        # 你的 tags 筛选逻辑
         if tags_param:
             # tags=a,b => 任意一个标签命中即返回
             raw_tags = [t.strip() for t in tags_param.split(',')]

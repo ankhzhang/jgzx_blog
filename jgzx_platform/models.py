@@ -91,6 +91,7 @@ class Project(models.Model):
     )
     recruit_count = models.PositiveSmallIntegerField('招募人数', default=1)
     skill_requirements = models.JSONField('技能要求', default=list, blank=True)
+    # 你的 tags 字段
     tags = models.JSONField('标签', default=list, blank=True)
     deadline = models.DateTimeField('招募截止时间')
     is_visible_when_ended = models.BooleanField(
@@ -131,6 +132,7 @@ class Project(models.Model):
         return f'{self.title} ({self.get_status_display()})'
 
 
+# 你的评论模型
 class Comment(models.Model):
     """项目评论：一级评论 + 二级回复（树状最多两层）"""
 

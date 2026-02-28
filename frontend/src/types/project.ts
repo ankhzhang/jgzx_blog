@@ -37,7 +37,7 @@ export interface ProjectListItem {
   created_at: string
   published_at: string | null
   is_visible_when_ended: boolean
-  tags: string[]
+  tags: string[]  // ← 保留你的 tags
   version: number
 }
 
@@ -46,7 +46,7 @@ export interface ProjectDetail extends ProjectListItem {
   publisher_id: number
   publisher_username: string
   skill_requirements: SkillItem[]
-  tags: string[]
+  tags: string[]  // ← 保留你的 tags
   offline_reason: string
   offline_at: string | null
   reject_reason: string
@@ -61,7 +61,7 @@ export interface ProjectCreateUpdatePayload {
   category: ProjectCategory
   recruit_count: number
   skill_requirements?: SkillItem[]
-  tags?: string[]
+  tags?: string[]  // ← 保留你的 tags
   deadline: string
   is_visible_when_ended?: boolean
   /** 创建时：true=草稿，false=直接提交审核 */
@@ -75,5 +75,5 @@ export interface ProjectListParams {
   status?: ProjectStatus
   q?: string
   /** 逗号分隔的标签字符串，例如 "Python,机器学习" */
-  tags?: string
+  tags?: string  // ← 保留你的 tags
 }

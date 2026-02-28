@@ -40,6 +40,7 @@
           <el-option label="学生项目" value="student" />
           <el-option label="教师项目" value="teacher" />
         </el-select>
+        <!-- 你的状态筛选 -->
         <el-select
           v-model="filters.status"
           placeholder="状态"
@@ -58,6 +59,7 @@
           style="width: 220px; margin-right: 12px"
           @keyup.enter="fetchList"
         />
+        <!-- 你的标签筛选 -->
         <el-input
           v-model="filters.tags"
           placeholder="标签筛选，逗号分隔"
@@ -106,7 +108,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ref, reactive, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { projectAPI } from '@/api/project'
@@ -116,10 +117,6 @@ import type { ProjectListItem, ProjectCategory, PublisherRole, ProjectStatus } f
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
-import type { ProjectListItem, ProjectCategory, PublisherRole } from '@/types/project'
-
-const authStore = useAuthStore()
-
 const loading = ref(false)
 const list = ref<ProjectListItem[]>([])
 
@@ -135,9 +132,6 @@ const filters = reactive<{
   status: '',
   q: '',
   tags: ''
-}>({
-  category: '',
-  publisher_role: ''
 })
 
 function statusTagType(status: string) {
@@ -160,8 +154,7 @@ async function fetchList() {
       publisher_role: filters.publisher_role || undefined,
       status: filters.status || undefined,
       q: filters.q || undefined,
-      tags: filters.tags || undefined
-      publisher_role: filters.publisher_role || undefined
+      tags: filters.tags || undefined  // ← 你的 tags 参数
     })
     list.value = res.data ?? []
   } finally {
@@ -174,7 +167,7 @@ function initFromRoute() {
   filters.category = (category as ProjectCategory) || ''
   filters.status = (status as ProjectStatus) || ''
   filters.q = (q as string) || ''
-  filters.tags = (tags as string) || ''
+  filters.tags = (tags as string) || ''  // ← 你的 tags 路由同步
 }
 
 onMounted(() => {
@@ -189,9 +182,6 @@ watch(
     fetchList()
   }
 )
-onMounted(() => {
-  fetchList()
-})
 </script>
 
 <style scoped>
