@@ -3,6 +3,8 @@ from rest_framework.routers import DefaultRouter
 from . import userviews
 from . import projectviews
 from . import commentviews
+from . import userviews  # 指向更名后的 userview.py
+from . import projectviews
 
 router = DefaultRouter()
 
@@ -52,5 +54,22 @@ urlpatterns = [
     path('projects/<int:pk>/comments/', commentviews.ProjectCommentListCreateView.as_view(), name='project-comments'),
     path('comments/<int:pk>/', commentviews.CommentDeleteView.as_view(), name='comment-delete'),
 
+    # ==========================================
+    # 4. 项目发布模块
+    # ==========================================
+    path('projects/', projectviews.ProjectListCreateView.as_view(), name='project-list-create'),
+    path('projects/<int:pk>/', projectviews.ProjectDetailView.as_view(), name='project-detail'),
+    path('projects/<int:pk>/edit/', projectviews.ProjectUpdateView.as_view(), name='project-update'),
+    path('projects/<int:pk>/submit/', projectviews.ProjectSubmitView.as_view(), name='project-submit'),
+    path('projects/<int:pk>/withdraw/', projectviews.ProjectWithdrawView.as_view(), name='project-withdraw'),
+    path('projects/<int:pk>/approve/', projectviews.ProjectApproveView.as_view(), name='project-approve'),
+    path('projects/<int:pk>/reject/', projectviews.ProjectRejectView.as_view(), name='project-reject'),
+    path('projects/<int:pk>/close-recruit/', projectviews.ProjectCloseRecruitView.as_view(), name='project-close-recruit'),
+    path('projects/<int:pk>/offline/', projectviews.ProjectOfflineView.as_view(), name='project-offline'),
+    path('projects/<int:pk>/restore/', projectviews.ProjectRestoreView.as_view(), name='project-restore'),
+    path('projects/<int:pk>/visibility/', projectviews.ProjectVisibilityView.as_view(), name='project-visibility'),
+    path('projects/<int:pk>/delete/', projectviews.ProjectDeleteView.as_view(), name='project-delete'),
+
+    # 包含 Router 生成的路由（如果未来增加了 ViewSet）
     path('', include(router.urls)),
 ]

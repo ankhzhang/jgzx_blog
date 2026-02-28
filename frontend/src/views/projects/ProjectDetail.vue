@@ -280,6 +280,9 @@ import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils'
 import type { ProjectDetail as IProjectDetail, SkillItem } from '@/types/project'
 import type { CommentItem } from '@/types/comment'
+import { useAuthStore } from '@/stores/auth'
+import { formatDate } from '@/utils'
+import type { ProjectDetail, SkillItem } from '@/types/project'
 
 const route = useRoute()
 const router = useRouter()
@@ -288,6 +291,7 @@ const authStore = useAuthStore()
 const loading = ref(true)
 const actionLoading = ref(false)
 const project = ref<IProjectDetail | null>(null)
+const project = ref<ProjectDetail | null>(null)
 const closeRecruitVisible = ref(false)
 const closeTarget = ref<'recruit_full' | 'ended'>('recruit_full')
 const visibilityVisible = ref(false)

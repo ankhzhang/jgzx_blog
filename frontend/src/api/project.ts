@@ -22,6 +22,9 @@ export const projectAPI = {
   },
 
   /** 创建：POST /api/projects/ */
+    return api.get<ProjectListItem[]>(BASE + '/', { params: p })
+  },
+
   create(data: ProjectCreateUpdatePayload) {
     return api.post<ProjectDetail>(BASE + '/', data)
   },

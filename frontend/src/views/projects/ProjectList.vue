@@ -106,6 +106,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ref, reactive, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { projectAPI } from '@/api/project'
@@ -115,6 +116,10 @@ import type { ProjectListItem, ProjectCategory, PublisherRole, ProjectStatus } f
 const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+import type { ProjectListItem, ProjectCategory, PublisherRole } from '@/types/project'
+
+const authStore = useAuthStore()
+
 const loading = ref(false)
 const list = ref<ProjectListItem[]>([])
 
@@ -130,6 +135,9 @@ const filters = reactive<{
   status: '',
   q: '',
   tags: ''
+}>({
+  category: '',
+  publisher_role: ''
 })
 
 function statusTagType(status: string) {
@@ -153,6 +161,7 @@ async function fetchList() {
       status: filters.status || undefined,
       q: filters.q || undefined,
       tags: filters.tags || undefined
+      publisher_role: filters.publisher_role || undefined
     })
     list.value = res.data ?? []
   } finally {
@@ -180,6 +189,9 @@ watch(
     fetchList()
   }
 )
+onMounted(() => {
+  fetchList()
+})
 </script>
 
 <style scoped>
