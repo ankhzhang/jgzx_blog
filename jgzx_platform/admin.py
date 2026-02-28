@@ -153,20 +153,20 @@ class ProjectAdmin(admin.ModelAdmin):
     change_list_template = 'admin/project_change_list.html'
 
     def status_colored(self, obj):
-        """带颜色的状态显示"""
-        colors = {
-            'draft': 'gray',
-            'pending': 'orange',
-            'published': 'green',
-            'recruit_full': 'blue',
-            'ended': 'purple',
-            'offline': 'red'
+        """带徽章样式的状态显示"""
+        badges = {
+            'draft': ('#6c757d', '💾'),
+            'pending': ('#fd7e14', '⏳'),
+            'published': ('#28a745', '✅'),
+            'recruit_full': ('#007bff', '👥'),
+            'ended': ('#6f42c1', '🏁'),
+            'offline': ('#dc3545', '🚫')
         }
         status_names = dict(Project.STATUS_CHOICES)
+        color, icon = badges.get(obj.status, ('#6c757d', '❓'))
         return format_html(
-            '<span style="color: {};">{}</span>',
-            colors.get(obj.status, 'black'),
-            status_names.get(obj.status, obj.status)
+            '<span style="background: {}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; display: inline-block;">{} {}</span>',
+            color, icon, status_names.get(obj.status, obj.status)
         )
     status_colored.short_description = '审核状态'
 
@@ -306,17 +306,17 @@ class CommentAdmin(admin.ModelAdmin):
     short_content.short_description = '评论内容'
 
     def status_colored(self, obj):
-        """带颜色的状态显示"""
-        colors = {
-            'pending': 'orange',
-            'approved': 'green',
-            'rejected': 'red'
+        """带徽章样式的状态显示"""
+        badges = {
+            'pending': ('#fd7e14', '⏳'),
+            'approved': ('#28a745', '✅'),
+            'rejected': ('#dc3545', '❌')
         }
         status_names = dict(Comment.STATUS_CHOICES)
+        color, icon = badges.get(obj.status, ('#6c757d', '❓'))
         return format_html(
-            '<span style="color: {};">{}</span>',
-            colors.get(obj.status, 'black'),
-            status_names.get(obj.status, obj.status)
+            '<span style="background: {}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; display: inline-block;">{} {}</span>',
+            color, icon, status_names.get(obj.status, obj.status)
         )
     status_colored.short_description = '审核状态'
 
@@ -355,6 +355,26 @@ class CommentAdmin(admin.ModelAdmin):
 
 
 # ==================== 5. 自定义 Admin 站点配置 ====================
+
+from django.contrib.admin import AdminSite
+
+class CustomAdminSite(AdminSite):
+    """自定义 Admin Site，支持仪表盘"""
+    
+    def index(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context.update({
+            'project_total': Project.objects.count(),
+            'project_pending': Project.objects.filter(status='pending').count(),
+            'comment_total': Comment.objects.count(),
+            'comment_pending': Comment.objects.filter(status='pending').count(),
+            'user_total': User.objects.count(),
+            'user_staff': User.objects.filter(is_staff=True).count(),
+        })
+        return super().index(request, extra_context)
+
+# 创建自定义 admin 实例
+custom_admin_site = CustomAdminSite(name='customadmin')
 
 admin.site.site_header = '教改项目平台管理后台'
 admin.site.site_title = '教改项目平台'

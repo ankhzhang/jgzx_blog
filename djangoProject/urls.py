@@ -16,8 +16,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
+
+def api_root(request):
+    return JsonResponse({
+        'message': '教改项目平台 API',
+        'admin': '/admin/',
+        'api': '/api/'
+    })
 
 urlpatterns = [
+    path('', api_root),
     path('admin/', admin.site.urls),
     path('api/', include('jgzx_platform.urls')),
 ]

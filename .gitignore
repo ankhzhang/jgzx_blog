@@ -4,4 +4,7 @@
 node_modules/
 dist/
 .env
-*.log
+*.log.idea/
+djangoproject/settings.py/
+jgzx_platform/migrations/
+frontend/vite.config.ts/
