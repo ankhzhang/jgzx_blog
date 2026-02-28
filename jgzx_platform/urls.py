@@ -1,10 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import userviews  # 指向更名后的 userview.py
+from . import userviews
 from . import projectviews
+from . import commentviews
 
-# 使用 DefaultRouter 处理那些基于标准动作（如 List, Retrieve）的接口
-# 虽然你目前大多使用 APIView，但为了以后扩展方便，保留 Router 结构是好习惯
 router = DefaultRouter()
 
 urlpatterns = [
@@ -27,9 +26,12 @@ urlpatterns = [
     path('bulk-register/', userviews.BulkRegisterView.as_view(), name='bulk-register'),
     path('users/', userviews.UserListView.as_view(), name='user-list'),
     path('users/<int:user_id>/', userviews.UserDetailView.as_view(), name='user-detail'),
+    path('users/<int:user_id>/set-admin/', userviews.UserAdminToggleView.as_view(), name='user-set-admin'),
+    path('users/<int:user_id>/ban/', userviews.UserBanView.as_view(), name='user-ban'),
+    path('users/<int:user_id>/unban/', userviews.UserUnbanView.as_view(), name='user-unban'),
 
     # ==========================================
-    # 4. 项目发布模块
+    # 4. 项目发布模块 (寇川的代码)
     # ==========================================
     path('projects/', projectviews.ProjectListCreateView.as_view(), name='project-list-create'),
     path('projects/<int:pk>/', projectviews.ProjectDetailView.as_view(), name='project-detail'),
@@ -44,6 +46,11 @@ urlpatterns = [
     path('projects/<int:pk>/visibility/', projectviews.ProjectVisibilityView.as_view(), name='project-visibility'),
     path('projects/<int:pk>/delete/', projectviews.ProjectDeleteView.as_view(), name='project-delete'),
 
-    # 包含 Router 生成的路由（如果未来增加了 ViewSet）
+    # ==========================================
+    # 5. 评论模块 (你的代码)
+    # ==========================================
+    path('projects/<int:pk>/comments/', commentviews.ProjectCommentListCreateView.as_view(), name='project-comments'),
+    path('comments/<int:pk>/', commentviews.CommentDeleteView.as_view(), name='comment-delete'),
+
     path('', include(router.urls)),
 ]

@@ -40,6 +40,33 @@
           <el-option label="学生项目" value="student" />
           <el-option label="教师项目" value="teacher" />
         </el-select>
+        <!-- 你的状态筛选 -->
+        <el-select
+          v-model="filters.status"
+          placeholder="状态"
+          clearable
+          style="width: 140px; margin-right: 12px"
+          @change="fetchList"
+        >
+          <el-option label="已发布" value="published" />
+          <el-option label="已招满" value="recruit_full" />
+          <el-option label="已结束" value="ended" />
+        </el-select>
+        <el-input
+          v-model="filters.q"
+          placeholder="搜索标题/描述"
+          clearable
+          style="width: 220px; margin-right: 12px"
+          @keyup.enter="fetchList"
+        />
+        <!-- 你的标签筛选 -->
+        <el-input
+          v-model="filters.tags"
+          placeholder="标签筛选，逗号分隔"
+          clearable
+          style="width: 200px; margin-right: 12px"
+          @keyup.enter="fetchList"
+        />
         <el-button type="primary" @click="fetchList">查询</el-button>
       </div>
     </el-card>
@@ -79,24 +106,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { projectAPI } from '@/api/project'
 import { formatDate } from '@/utils'
-import type { ProjectListItem, ProjectCategory, PublisherRole } from '@/types/project'
+import type { ProjectListItem, ProjectCategory, PublisherRole, ProjectStatus } from '@/types/project'
 
 const authStore = useAuthStore()
-
+const route = useRoute()
+const router = useRouter()
 const loading = ref(false)
 const list = ref<ProjectListItem[]>([])
 
 const filters = reactive<{
   category: ProjectCategory | ''
   publisher_role: PublisherRole | ''
+  status: ProjectStatus | ''
+  q: string
+  tags: string
 }>({
   category: '',
-  publisher_role: ''
+  publisher_role: '',
+  status: '',
+  q: '',
+  tags: ''
 })
 
 function statusTagType(status: string) {
@@ -116,7 +151,10 @@ async function fetchList() {
   try {
     const res = await projectAPI.getList({
       category: filters.category || undefined,
-      publisher_role: filters.publisher_role || undefined
+      publisher_role: filters.publisher_role || undefined,
+      status: filters.status || undefined,
+      q: filters.q || undefined,
+      tags: filters.tags || undefined  // ← 你的 tags 参数
     })
     list.value = res.data ?? []
   } finally {
@@ -124,9 +162,26 @@ async function fetchList() {
   }
 }
 
+function initFromRoute() {
+  const { category, status, q, tags } = route.query
+  filters.category = (category as ProjectCategory) || ''
+  filters.status = (status as ProjectStatus) || ''
+  filters.q = (q as string) || ''
+  filters.tags = (tags as string) || ''  // ← 你的 tags 路由同步
+}
+
 onMounted(() => {
+  initFromRoute()
   fetchList()
 })
+
+watch(
+  () => route.query,
+  () => {
+    initFromRoute()
+    fetchList()
+  }
+)
 </script>
 
 <style scoped>

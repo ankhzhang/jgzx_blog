@@ -69,6 +69,8 @@ class ProjectListCreateView(views.APIView, ProjectQuerysetMixin):
         publisher_role = request.query_params.get('publisher_role', '').strip()
         status_filter = request.query_params.get('status', '').strip()
         keyword = request.query_params.get('q', '').strip()
+        # 你的 tags 筛选参数
+        tags_param = request.query_params.get('tags', '').strip()
 
         if mine:
             qs = self.get_queryset(request, mine=True)
@@ -86,6 +88,16 @@ class ProjectListCreateView(views.APIView, ProjectQuerysetMixin):
                 Q(title__icontains=keyword)
                 | Q(description__icontains=keyword)
             )
+        # 你的 tags 筛选逻辑
+        if tags_param:
+            # tags=a,b => 任意一个标签命中即返回
+            raw_tags = [t.strip() for t in tags_param.split(',')]
+            tag_list = [t for t in raw_tags if t]
+            if tag_list:
+                tag_q = Q()
+                for t in tag_list:
+                    tag_q |= Q(tags__contains=[t])
+                qs = qs.filter(tag_q)
 
         qs = qs.order_by('-created_at')[:200]
         serializer = ProjectListSerializer(qs, many=True)
@@ -120,10 +132,12 @@ class ProjectDetailView(views.APIView, ProjectQuerysetMixin):
             obj = Project.objects.select_related('publisher').get(pk=pk, deleted_at__isnull=True)
         except Project.DoesNotExist:
             return None
+        # 公开可见
         if obj.status == 'published':
             return obj
         if obj.status in ('recruit_full', 'ended') and obj.is_visible_when_ended:
             return obj
+        # 本人或管理员
         if request.user and request.user.is_authenticated:
             if obj.publisher_id == request.user.id or request.user.is_staff:
                 return obj
@@ -170,6 +184,7 @@ class ProjectUpdateView(views.APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         attrs = serializer.validated_data
+        # 已发布且内容有变更 -> 回待审
         if project.status == 'published' and _content_changed(project, attrs):
             attrs['status'] = 'pending'
             attrs['submitted_at'] = timezone.now()

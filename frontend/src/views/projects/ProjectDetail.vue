@@ -71,10 +71,180 @@
               {{ typeof s === 'string' ? s : `${(s as { desc: string }).desc}（${(s as { count: number }).count} 人）` }}
             </li>
           </ul>
+          <!-- 你的标签展示 -->
+          <div v-if="project.tags && project.tags.length" class="tags-row">
+            <span class="tags-label">标签：</span>
+            <el-tag
+              v-for="tag in project.tags"
+              :key="tag"
+              size="small"
+              class="tag-item"
+            >
+              {{ tag }}
+            </el-tag>
+          </div>
           <div class="publisher-info">
             <span>发布人：{{ project.publisher_name }}</span>
             <span>发布时间：{{ formatDate(project.created_at) }}</span>
             <span v-if="project.published_at">审核通过：{{ formatDate(project.published_at) }}</span>
+          </div>
+        </div>
+
+        <!-- 你的评论模块 -->
+        <el-divider />
+
+        <div class="comments-section">
+          <h4>互动评论</h4>
+          <p class="comments-tip">
+            评论区可用于提问答疑或作为自我介绍/申请意向，负责人和导师会在此回复。
+          </p>
+          <div v-if="authStore.isAuthenticated" class="comment-editor">
+            <el-input
+              v-model="newComment"
+              type="textarea"
+              :rows="3"
+              maxlength="2000"
+              show-word-limit
+              placeholder="针对项目整体发表评论，或简要自我介绍、说明申请意向"
+            />
+            <div class="comment-editor-actions">
+              <el-button type="primary" size="small" :loading="commentSubmitting" @click="submitComment()">
+                发表评论
+              </el-button>
+            </div>
+          </div>
+          <div v-else class="comments-login-tip">
+            请登录后参与评论。
+          </div>
+
+          <div v-if="comments.length === 0" class="comments-empty">
+            <el-empty description="暂时还没有评论，快来留下你的想法吧" />
+          </div>
+          <div v-else class="comments-tree">
+            <div
+              v-for="item in comments"
+              :key="item.id"
+              class="comment-item"
+            >
+              <div class="comment-main">
+                <div class="comment-header">
+                  <span class="comment-author">
+                    {{ item.author_name || item.author_username }}
+                    <el-tag
+                      v-if="item.author_identity === 'teacher'"
+                      size="small"
+                      type="success"
+                      class="author-tag"
+                    >
+                      教师
+                    </el-tag>
+                    <el-tag
+                      v-else
+                      size="small"
+                      type="info"
+                      class="author-tag"
+                    >
+                      学生
+                    </el-tag>
+                  </span>
+                  <span class="comment-time">{{ formatDate(item.created_at) }}</span>
+                </div>
+                <div class="comment-content" :class="{ 'is-deleted': item.is_deleted }">
+                  <span v-if="item.is_deleted">该评论已被删除</span>
+                  <span v-else>{{ item.content }}</span>
+                </div>
+                <div class="comment-actions">
+                  <el-button
+                    v-if="authStore.isAuthenticated && !item.is_deleted"
+                    text
+                    size="small"
+                    @click="toggleReply(item.id)"
+                  >
+                    回复
+                  </el-button>
+                  <el-button
+                    v-if="item.can_delete && !item.is_deleted"
+                    text
+                    size="small"
+                    type="danger"
+                    @click="deleteComment(item.id)"
+                  >
+                    删除
+                  </el-button>
+                </div>
+                <div v-if="replyVisible[item.id]" class="reply-editor">
+                  <el-input
+                    v-model="replyContent[item.id]"
+                    type="textarea"
+                    :rows="2"
+                    maxlength="2000"
+                    show-word-limit
+                    :placeholder="`回复 ${item.author_name || item.author_username}：`"
+                  />
+                  <div class="comment-editor-actions">
+                    <el-button
+                      type="primary"
+                      size="small"
+                      :loading="commentSubmitting"
+                      @click="submitComment(item.id)"
+                    >
+                      发送回复
+                    </el-button>
+                    <el-button size="small" text @click="toggleReply(item.id)">
+                      取消
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="item.replies && item.replies.length" class="comment-replies">
+                <div
+                  v-for="child in item.replies"
+                  :key="child.id"
+                  class="comment-item reply-item"
+                >
+                  <div class="comment-main">
+                    <div class="comment-header">
+                      <span class="comment-author">
+                        {{ child.author_name || child.author_username }}
+                        <el-tag
+                          v-if="child.author_identity === 'teacher'"
+                          size="small"
+                          type="success"
+                          class="author-tag"
+                        >
+                          教师
+                        </el-tag>
+                        <el-tag
+                          v-else
+                          size="small"
+                          type="info"
+                          class="author-tag"
+                        >
+                          学生
+                        </el-tag>
+                      </span>
+                      <span class="comment-time">{{ formatDate(child.created_at) }}</span>
+                    </div>
+                    <div class="comment-content" :class="{ 'is-deleted': child.is_deleted }">
+                      <span v-if="child.is_deleted">该评论已被删除</span>
+                      <span v-else>{{ child.content }}</span>
+                    </div>
+                    <div class="comment-actions">
+                      <el-button
+                        v-if="child.can_delete && !child.is_deleted"
+                        text
+                        size="small"
+                        type="danger"
+                        @click="deleteComment(child.id)"
+                      >
+                        删除
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </template>
@@ -107,9 +277,11 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { projectAPI } from '@/api/project'
+import { commentAPI } from '@/api/comment'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/utils'
-import type { ProjectDetail, SkillItem } from '@/types/project'
+import type { ProjectDetail as IProjectDetail, SkillItem } from '@/types/project'
+import type { CommentItem } from '@/types/comment'
 
 const route = useRoute()
 const router = useRouter()
@@ -117,11 +289,18 @@ const authStore = useAuthStore()
 
 const loading = ref(true)
 const actionLoading = ref(false)
-const project = ref<ProjectDetail | null>(null)
+const project = ref<IProjectDetail | null>(null)
 const closeRecruitVisible = ref(false)
 const closeTarget = ref<'recruit_full' | 'ended'>('recruit_full')
 const visibilityVisible = ref(false)
 const visibilityValue = ref(true)
+
+// 你的评论相关变量
+const comments = ref<CommentItem[]>([])
+const newComment = ref('')
+const replyContent = ref<Record<number, string>>({})
+const replyVisible = ref<Record<number, boolean>>({})
+const commentSubmitting = ref(false)
 
 const isAdmin = computed(() => authStore.isAdmin)
 const isOwnerOrAdmin = computed(() => {
@@ -155,10 +334,23 @@ async function fetchDetail() {
   try {
     const res = await projectAPI.getDetail(id)
     project.value = res.data
+    await fetchComments()  // 获取评论
   } catch {
     project.value = null
   } finally {
     loading.value = false
+  }
+}
+
+// 你的评论函数
+async function fetchComments() {
+  const id = Number(route.params.id)
+  if (!id) return
+  try {
+    const res = await commentAPI.getList(id)
+    comments.value = res.data ?? []
+  } catch {
+    comments.value = []
   }
 }
 
@@ -252,6 +444,66 @@ async function doRestore() {
     ElMessage.success('已恢复上架')
   } finally {
     actionLoading.value = false
+  }
+}
+
+// 你的评论函数
+async function submitComment(parentId?: number) {
+  if (!project.value) return
+  if (!authStore.isAuthenticated) {
+    ElMessage.warning('请先登录后再评论')
+    return
+  }
+
+  const content = parentId
+    ? (replyContent.value[parentId] || '').trim()
+    : newComment.value.trim()
+
+  if (!content) {
+    ElMessage.warning('评论内容不能为空')
+    return
+  }
+
+  commentSubmitting.value = true
+  try {
+    await commentAPI.create(project.value.id, {
+      content,
+      parent: parentId ?? null
+    })
+    if (parentId) {
+      replyContent.value[parentId] = ''
+      replyVisible.value[parentId] = false
+    } else {
+      newComment.value = ''
+    }
+    await fetchComments()
+  } finally {
+    commentSubmitting.value = false
+  }
+}
+
+function toggleReply(commentId: number) {
+  replyVisible.value[commentId] = !replyVisible.value[commentId]
+  if (replyVisible.value[commentId] && !replyContent.value[commentId]) {
+    replyContent.value[commentId] = ''
+  }
+}
+
+async function deleteComment(commentId: number) {
+  try {
+    await ElMessageBox.confirm('确定删除该评论？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+  } catch {
+    return
+  }
+  try {
+    await commentAPI.delete(commentId)
+    await fetchComments()
+  } catch {
+    // 错误提示由全局拦截器处理
   }
 }
 

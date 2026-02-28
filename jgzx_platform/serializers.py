@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from .models import UserProfile, Project
+from .models import UserProfile, Project, Comment
 
 
 # ==========================================
@@ -116,11 +116,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ('id', 'username', 'real_name', 'identity', 'phone', 'department',
-                  'avatar', 'bio', 'project_count', 'comment_count',
-                  'is_banned', 'date_joined', 'created_at', 'updated_at', 'is_staff')
+        fields = (
+            'id', 'username', 'real_name', 'identity', 'phone', 'department',
+            'avatar', 'bio', 'project_count', 'comment_count',
+            'is_banned', 'ban_reason', 'banned_until',
+            'date_joined', 'created_at', 'updated_at', 'is_staff',
+        )
         # 核心业务字段只读，防止通过该接口被篡改
-        read_only_fields = ('identity', 'project_count', 'comment_count', 'is_banned', 'is_staff')
+        read_only_fields = (
+            'identity', 'project_count', 'comment_count',
+            'is_banned', 'ban_reason', 'banned_until', 'is_staff',
+        )
 
 
 # ==========================================
@@ -229,7 +235,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
             'id', 'title', 'category', 'category_display', 'status', 'status_display',
             'publisher_role', 'publisher_role_display', 'publisher_name',
             'recruit_count', 'deadline', 'created_at', 'published_at',
-            'is_visible_when_ended', 'version'
+            'is_visible_when_ended', 'tags', 'version'  # ← 保留你的 tags
         )
 
 
@@ -247,21 +253,22 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'publisher_id', 'publisher_name', 'publisher_username', 'publisher_role',
             'publisher_role_display', 'title', 'description', 'category', 'category_display',
-            'status', 'status_display', 'recruit_count', 'skill_requirements', 'deadline',
+            'status', 'status_display', 'recruit_count', 'skill_requirements', 'tags', 'deadline',  # ← 保留你的 tags
             'is_visible_when_ended', 'offline_reason', 'offline_at', 'reject_reason',
             'submitted_at', 'published_at', 'created_at', 'updated_at', 'version'
         )
 
 
 class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
-    """创建/更新项目（标题、描述、类别、招募人数、技能要求、截止时间、是否结束可见）"""
+    """创建/更新项目（标题、描述、类别、招募人数、技能要求、标签、截止时间、是否结束可见）"""
     skill_requirements = serializers.JSONField(required=False, default=list)
+    tags = serializers.JSONField(required=False, default=list)  # ← 保留你的 tags
 
     class Meta:
         model = Project
         fields = (
             'title', 'description', 'category', 'recruit_count',
-            'skill_requirements', 'deadline', 'is_visible_when_ended'
+            'skill_requirements', 'tags', 'deadline', 'is_visible_when_ended'  # ← 保留你的 tags
         )
 
     def validate_title(self, value):
@@ -291,6 +298,7 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError('截止时间必填')
         now = timezone.now()
+        # 统一为 naive 再比较，避免 USE_TZ=False 时 timezone.now() 为 naive 而 value 为 aware
         if timezone.is_aware(value):
             value = timezone.make_naive(value, timezone.get_current_timezone())
         if timezone.is_aware(now):
@@ -306,7 +314,36 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
         skill = attrs.get('skill_requirements')
         if skill is not None:
             _validate_skill_requirements(skill, recruit_count or 1)
+        tags = attrs.get('tags')
+        if tags is not None:
+            _validate_tags(tags)
         return attrs
+
+
+def _validate_tags(value):
+    """标签：简单字符串数组，控制长度与字符集"""
+    if value is None:
+        return
+    if not isinstance(value, list):
+        raise serializers.ValidationError('标签必须是数组')
+    if len(value) > 10:
+        raise serializers.ValidationError('标签最多 10 个')
+    seen = set()
+    for i, item in enumerate(value):
+        if not isinstance(item, str):
+            raise serializers.ValidationError(f'第 {i+1} 个标签格式不正确')
+        s = (item or '').strip()
+        if len(s) == 0:
+            raise serializers.ValidationError(f'第 {i+1} 个标签不能为空')
+        if len(s) > 20:
+            raise serializers.ValidationError(f'第 {i+1} 个标签不超过 20 字')
+        # 允许中文、字母、数字、下划线和中划线
+        import re
+        if not re.match(r'^[\w\u4e00-\u9fff-]+$', s):
+            raise serializers.ValidationError(f'第 {i+1} 个标签仅允许中文、字母、数字、下划线和中划线')
+        if s in seen:
+            continue
+        seen.add(s)
 
 
 class RejectBodySerializer(serializers.Serializer):
@@ -319,3 +356,132 @@ class OfflineBodySerializer(serializers.Serializer):
 
 class CloseRecruitBodySerializer(serializers.Serializer):
     target = serializers.ChoiceField(choices=['recruit_full', 'ended'])
+
+
+# ==========================================
+# 评论模块 — 序列化器与敏感词校验
+# ==========================================
+
+SENSITIVE_WORDS = [
+    # 简单示例，实际可从配置/数据库加载
+    '违禁词',
+    '不文明用语',
+]
+
+
+def _normalize_text(text: str) -> str:
+    """敏感词匹配前的简单归一化：去空白并转小写"""
+    if not text:
+        return ''
+    return ''.join(text.split()).lower()
+
+
+def _check_sensitive_words(text: str):
+    norm = _normalize_text(text)
+    for w in SENSITIVE_WORDS:
+        w = (w or '').strip()
+        if not w:
+            continue
+        if w.lower() in norm:
+            raise serializers.ValidationError('评论包含不当内容，请修改后重试')
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    """树状评论节点（含子回复）"""
+
+    author_id = serializers.IntegerField(source='author.id', read_only=True)
+    author_name = serializers.CharField(source='author.first_name', read_only=True)
+    author_username = serializers.CharField(source='author.username', read_only=True)
+    author_identity = serializers.CharField(source='author.profile.identity', read_only=True)
+    is_deleted = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
+    replies = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comment
+        fields = (
+            'id',
+            'project_id',
+            'parent_id',
+            'content',
+            'created_at',
+            'updated_at',
+            'author_id',
+            'author_name',
+            'author_username',
+            'author_identity',
+            'is_deleted',
+            'can_delete',
+            'replies',
+        )
+
+    def get_is_deleted(self, obj: Comment) -> bool:
+        return obj.deleted_at is not None
+
+    def get_can_delete(self, obj: Comment) -> bool:
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        if request.user.is_staff:
+            return True
+        return obj.author_id == request.user.id
+
+    def get_replies(self, obj: Comment):
+        # 仅返回直接子回复，按时间排序
+        queryset = getattr(obj, 'replies', None)
+        if queryset is None:
+            return []
+        replies_qs = queryset.all().order_by('created_at')
+        serializer = CommentSerializer(
+            replies_qs,
+            many=True,
+            context=self.context,
+        )
+        return serializer.data
+
+
+class CommentCreateSerializer(serializers.ModelSerializer):
+    """创建/回复评论"""
+
+    parent = serializers.PrimaryKeyRelatedField(
+        queryset=Comment.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = Comment
+        fields = ('content', 'parent')
+
+    def validate_content(self, value: str):
+        s = (value or '').strip()
+        if len(s) == 0:
+            raise serializers.ValidationError('评论内容不能为空')
+        if len(s) > 2000:
+            raise serializers.ValidationError('评论内容不超过 2000 字')
+        _check_sensitive_words(s)
+        return s
+
+    def validate_parent(self, parent: Comment):
+        """二级评论：parent 必须是当前项目下的一级评论"""
+        if parent is None:
+            return None
+        project = self.context.get('project')
+        if project is None:
+            raise serializers.ValidationError('内部错误：缺少项目上下文')
+        if parent.project_id != project.id:
+            raise serializers.ValidationError('回复的评论不属于当前项目')
+        if parent.parent_id is not None:
+            raise serializers.ValidationError('仅支持两级评论，不能回复子评论')
+        if parent.deleted_at is not None:
+            raise serializers.ValidationError('不能回复已删除的评论')
+        return parent
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        project = self.context.get('project')
+        return Comment.objects.create(
+            project=project,
+            author=request.user,
+            **validated_data,
+        )

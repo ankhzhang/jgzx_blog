@@ -1,8 +1,5 @@
 from django.db import models
-
-# Create your models here.
 from django.contrib.auth.models import User
-from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -94,6 +91,8 @@ class Project(models.Model):
     )
     recruit_count = models.PositiveSmallIntegerField('招募人数', default=1)
     skill_requirements = models.JSONField('技能要求', default=list, blank=True)
+    # 你的 tags 字段
+    tags = models.JSONField('标签', default=list, blank=True)
     deadline = models.DateTimeField('招募截止时间')
     is_visible_when_ended = models.BooleanField(
         '已结束是否对他人可见', default=True
@@ -131,3 +130,43 @@ class Project(models.Model):
 
     def __str__(self):
         return f'{self.title} ({self.get_status_display()})'
+
+
+# 你的评论模型
+class Comment(models.Model):
+    """项目评论：一级评论 + 二级回复（树状最多两层）"""
+
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name='comments', verbose_name='所属项目'
+    )
+    author = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name='comments', verbose_name='评论者'
+    )
+    parent = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='replies',
+        verbose_name='父评论',
+    )
+    content = models.TextField('评论内容')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='deleted_comments',
+        verbose_name='删除人',
+    )
+
+    class Meta:
+        verbose_name = '评论'
+        verbose_name_plural = '评论'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'Comment({self.id}) on {self.project_id}'
