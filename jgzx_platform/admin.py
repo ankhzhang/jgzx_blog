@@ -1,4 +1,5 @@
 from django.contrib import admin
+<<<<<<< HEAD
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -112,10 +113,21 @@ class ProjectReviewForm(forms.Form):
         required=False,
         label='驳回理由'
     )
+=======
+from .models import UserProfile, Project
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'identity', 'department', 'phone')
+    list_filter = ('identity',)
+    search_fields = ('user__username', 'user__first_name', 'department')
+>>>>>>> 342873a08c9acedef4be5127b5f4f025ca56a31d
 
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
+<<<<<<< HEAD
     """项目管理后台，支持审核流"""
     
     # 列表显示
@@ -336,3 +348,9 @@ class CommentAdmin(admin.ModelAdmin):
 admin.site.site_header = '教改项目平台管理后台'
 admin.site.site_title = '教改项目平台'
 admin.site.index_title = '后台管理首页'
+=======
+    list_display = ('id', 'title', 'publisher', 'publisher_role', 'category', 'status', 'recruit_count', 'deadline', 'created_at')
+    list_filter = ('status', 'category', 'publisher_role')
+    search_fields = ('title', 'description')
+    raw_id_fields = ('publisher',)
+>>>>>>> 342873a08c9acedef4be5127b5f4f025ca56a31d
