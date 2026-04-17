@@ -1,0 +1,52 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block content %}
+<div id="content-main">
+    <h1>待审核项目列表</h1>
+    
+    {% if pending_projects %}
+        <p>当前共有 <strong style="color: orange;">{{ pending_projects|length }}</strong> 个项目等待审核。</p>
+        
+        <div class="results">
+            <table id="result_list">
+                <thead>
+                    <tr>
+                        <th>标题</th>
+                        <th>作者</th>
+                        <th>身份</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in pending_projects %}
+                    <tr class="{% cycle 'row1' 'row2' %}">
+                        <td><a href="{% url 'admin:jgzx_platform_project_change' project.pk %}">{{ project.title }}</a></td>
+                        <td>{{ project.author.username }} ({{ project.author.first_name }})</td>
+                        <td>{{ project.author.profile.get_identity_display }}</td>
+                        <td>{{ project.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <a href="{% url 'admin:jgzx_platform_project_change' project.pk %}" class="button" style="background: #417690; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px;">查看详情</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="submit-row" style="margin-top: 20px;">
+            <a href="{% url 'admin:jgzx_platform_project_changelist' %}" class="button" style="background: #417690; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">返回项目列表</a>
+        </div>
+    {% else %}
+        <div class="messagelist">
+            <div class="message success">
+                太棒了！当前没有待审核的项目。
+            </div>
+        </div>
+        <div class="submit-row" style="margin-top: 20px;">
+            <a href="{% url 'admin:jgzx_platform_project_changelist' %}" class="button" style="background: #417690; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">返回项目列表</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
