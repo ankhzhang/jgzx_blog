@@ -1,0 +1,50 @@
+{% extends "admin/index.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div id="content-main">
+    <!-- 统计仪表盘 -->
+    <div class="dashboard-stats" style="margin-bottom: 30px;">
+        <h2 style="color: #1a5fb4; margin-bottom: 20px;">📊 数据概览</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+            <!-- 项目统计 -->
+            <div class="stat-card" style="background: linear-gradient(135deg, #1a5fb4 0%, #3584e4 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 32px; font-weight: bold;">{{ project_total }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">总项目数</div>
+                <div style="margin-top: 10px; font-size: 12px;">
+                    <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px;">{{ project_pending }} 待审核</span>
+                </div>
+            </div>
+            
+            <!-- 评论统计 -->
+            <div class="stat-card" style="background: linear-gradient(135deg, #26a269 0%, #33d17a 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 32px; font-weight: bold;">{{ comment_total }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">总评论数</div>
+                <div style="margin-top: 10px; font-size: 12px;">
+                    <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px;">{{ comment_pending }} 待审核</span>
+                </div>
+            </div>
+            
+            <!-- 用户统计 -->
+            <div class="stat-card" style="background: linear-gradient(135deg, #613583 0%, #9141ac 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 32px; font-weight: bold;">{{ user_total }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">总用户数</div>
+                <div style="margin-top: 10px; font-size: 12px;">
+                    <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px;">{{ user_staff }} 管理员</span>
+                </div>
+            </div>
+            
+            <!-- 快速操作 -->
+            <div class="stat-card" style="background: linear-gradient(135deg, #c64600 0%, #ff7800 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">⚡ 快速操作</div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <a href="{% url 'admin:project_pending' %}" style="color: white; text-decoration: none; font-size: 13px; background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 6px; text-align: center;">审核项目</a>
+                    <a href="{% url 'admin:jgzx_platform_comment_changelist' %}" style="color: white; text-decoration: none; font-size: 13px; background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 6px; text-align: center;">审核评论</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {{ block.super }}
+</div>
+{% endblock %}
