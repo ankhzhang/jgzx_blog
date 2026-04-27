@@ -3,7 +3,10 @@ import type {
   ProjectListItem,
   ProjectDetail,
   ProjectCreateUpdatePayload,
-  ProjectListParams
+  ProjectListParams,
+  ProjectCommentTreeResponse,
+  ProjectComment,
+  ProjectCommentPayload
 } from '@/types/project'
 
 const BASE = '/projects'
@@ -16,6 +19,7 @@ export const projectAPI = {
     if (params?.publisher_role) p.publisher_role = params.publisher_role
     if (params?.status) p.status = params.status
     if (params?.q) p.q = params.q
+    if (params?.tag) p.tag = params.tag
     return api.get<ProjectListItem[]>(BASE + '/', { params: p })
   },
 
@@ -68,5 +72,25 @@ export const projectAPI = {
 
   delete(id: number) {
     return api.delete(`${BASE}/${id}/delete/`)
+  },
+
+  getComments(projectId: number) {
+    return api.get<ProjectCommentTreeResponse>(`${BASE}/${projectId}/comments/`)
+  },
+
+  createComment(projectId: number, payload: ProjectCommentPayload) {
+    return api.post<ProjectComment>(`${BASE}/${projectId}/comments/`, payload)
+  },
+
+  deleteComment(commentId: number) {
+    return api.delete(`/comments/${commentId}/delete/`)
+  },
+
+  getUnreadCommentCount() {
+    return api.get<{ unread_count: number }>(`/comments/unread-count/`)
+  },
+
+  markProjectCommentsRead(projectId: number) {
+    return api.post<{ marked_count: number }>(`${BASE}/${projectId}/comments/mark-read/`)
   }
 }

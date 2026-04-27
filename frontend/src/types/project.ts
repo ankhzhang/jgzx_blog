@@ -71,4 +71,29 @@ export interface ProjectListParams {
   publisher_role?: PublisherRole
   status?: ProjectStatus
   q?: string
+  tag?: string
+}
+
+export interface ProjectComment {
+  id: number
+  project_id: number
+  parent_id: number | null
+  content: string
+  is_deleted: boolean
+  author_name: string
+  author_username: string
+  created_at: string
+  updated_at: string
+  can_delete: boolean
+  replies?: ProjectComment[]
+}
+
+export interface ProjectCommentTreeResponse {
+  project_id: number
+  items: ProjectComment[]
+}
+
+export interface ProjectCommentPayload {
+  content: string
+  parent_id?: number | null
 }
