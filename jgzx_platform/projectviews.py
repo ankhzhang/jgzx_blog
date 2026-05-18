@@ -68,6 +68,7 @@ class ProjectListCreateView(views.APIView, ProjectQuerysetMixin):
         category = request.query_params.get('category', '').strip()
         publisher_role = request.query_params.get('publisher_role', '').strip()
         status_filter = request.query_params.get('status', '').strip()
+        tag = request.query_params.get('tag', '').strip()
         keyword = request.query_params.get('q', '').strip()
 
         if mine:
@@ -81,6 +82,8 @@ class ProjectListCreateView(views.APIView, ProjectQuerysetMixin):
             qs = qs.filter(publisher_role=publisher_role)
         if status_filter and status_filter in dict(Project.STATUS_CHOICES):
             qs = qs.filter(status=status_filter)
+        if tag:
+            qs = qs.filter(tags__contains=[tag])
         if keyword:
             qs = qs.filter(
                 Q(title__icontains=keyword)

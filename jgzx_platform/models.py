@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.core.exceptions import ValidationError
 
 
 class UserProfile(models.Model):
@@ -76,6 +77,8 @@ class Project(models.Model):
     )
     recruit_count = models.PositiveSmallIntegerField('招募人数', default=1)
     skill_requirements = models.JSONField('技能要求', default=list, blank=True)
+    # 你的 tags 字段
+    tags = models.JSONField('标签', default=list, blank=True)
     deadline = models.DateTimeField('招募截止时间')
     is_visible_when_ended = models.BooleanField(
         '已结束是否对他人可见', default=True
@@ -162,6 +165,98 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"{self.author.username}: {self.content[:30]}..."
+
+
+class ProjectThreadComment(models.Model):
+    """项目互动评论：支持一级评论 + 二级回复。"""
+
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name='thread_comments',
+        verbose_name='所属项目',
+        db_constraint=False,
+    )
+    author = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name='thread_comments', verbose_name='评论者'
+    )
+    parent = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='replies',
+        verbose_name='父评论',
+    )
+    content = models.TextField('评论内容')
+    is_deleted = models.BooleanField('是否删除', default=False)
+    deleted_at = models.DateTimeField('删除时间', null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='thread_deleted_comments',
+        verbose_name='删除人',
+    )
+    created_at = models.DateTimeField('创建时间', auto_now_add=True)
+    updated_at = models.DateTimeField('更新时间', auto_now=True)
+
+    class Meta:
+        verbose_name = '互动评论'
+        verbose_name_plural = '互动评论'
+        ordering = ['created_at']
+
+    def clean(self):
+        if self.parent_id is None:
+            return
+        if self.parent.project_id != self.project_id:
+            raise ValidationError('回复必须属于同一个项目')
+        if self.parent.parent_id is not None:
+            raise ValidationError('仅支持二级回复')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.author.username}: {self.content[:20]}"
+
+
+class ProjectCommentReadState(models.Model):
+    """项目发布者评论已读状态。"""
+
+    owner = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='project_comment_read_states', verbose_name='项目发布者'
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name='comment_read_states',
+        verbose_name='项目',
+        db_constraint=False,
+    )
+    comment = models.OneToOneField(
+        ProjectThreadComment,
+        on_delete=models.CASCADE,
+        related_name='read_state',
+        verbose_name='评论',
+    )
+    is_read = models.BooleanField('是否已读', default=False)
+    read_at = models.DateTimeField('已读时间', null=True, blank=True)
+    created_at = models.DateTimeField('创建时间', auto_now_add=True)
+    updated_at = models.DateTimeField('更新时间', auto_now=True)
+
+    class Meta:
+        verbose_name = '评论已读状态'
+        verbose_name_plural = '评论已读状态'
+        indexes = [
+            models.Index(fields=['owner', 'is_read']),
+            models.Index(fields=['owner', 'project', 'is_read']),
+        ]
+
+    def __str__(self):
+        return f"owner={self.owner_id}, comment={self.comment_id}, read={self.is_read}"
 
 
 # ==================== 信号部分 ====================

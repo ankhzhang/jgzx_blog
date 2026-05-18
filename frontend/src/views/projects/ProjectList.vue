@@ -18,13 +18,24 @@
         </div>
       </div>
       <div class="filters">
+        <el-radio-group
+          v-model="filters.top_category"
+          style="margin-right: 12px"
+          @change="onTopCategoryChange"
+        >
+          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="research">科研</el-radio-button>
+          <el-radio-button label="competition">竞赛</el-radio-button>
+          <el-radio-button label="innovation">大创项目</el-radio-button>
+        </el-radio-group>
         <el-select
           v-model="filters.category"
           placeholder="类别"
           clearable
-          style="width: 120px; margin-right: 12px"
+          style="width: 160px; margin-right: 12px"
           @change="fetchList"
         >
+          <el-option label="全部类别" value="" />
           <el-option label="教师科研项目" value="teacher_research" />
           <el-option label="学科竞赛" value="subject_competition" />
           <el-option label="大创项目-创新类" value="innovation_innov" />
@@ -40,6 +51,23 @@
           <el-option label="学生项目" value="student" />
           <el-option label="教师项目" value="teacher" />
         </el-select>
+        <el-select
+          v-model="filters.status"
+          placeholder="状态"
+          clearable
+          style="width: 120px; margin-right: 12px"
+          @change="fetchList"
+        >
+          <el-option label="已发布" value="published" />
+          <el-option label="已招满" value="recruit_full" />
+          <el-option label="已结束" value="ended" />
+        </el-select>
+        <el-input
+          v-model="filters.tag"
+          placeholder="标签筛选（如 AI）"
+          style="width: 180px; margin-right: 12px"
+          @keyup.enter="fetchList"
+        />
         <el-button type="primary" @click="fetchList">查询</el-button>
       </div>
     </el-card>
@@ -80,24 +108,45 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { projectAPI } from '@/api/project'
 import { formatDate } from '@/utils'
-import type { ProjectListItem, ProjectCategory, PublisherRole } from '@/types/project'
+import type { ProjectListItem, ProjectCategory, PublisherRole, ProjectStatus } from '@/types/project'
 
 const authStore = useAuthStore()
+const route = useRoute()
 
 const loading = ref(false)
 const list = ref<ProjectListItem[]>([])
 
 const filters = reactive<{
+  top_category: 'all' | 'research' | 'competition' | 'innovation'
   category: ProjectCategory | ''
   publisher_role: PublisherRole | ''
+  status: ProjectStatus | ''
+  tag: string
 }>({
+  top_category: 'all',
   category: '',
-  publisher_role: ''
+  publisher_role: '',
+  status: '',
+  tag: ''
 })
+
+function onTopCategoryChange() {
+  if (filters.top_category === 'research') {
+    filters.category = 'teacher_research'
+  } else if (filters.top_category === 'competition') {
+    filters.category = 'subject_competition'
+  } else if (filters.top_category === 'innovation') {
+    filters.category = 'innovation_innov'
+  } else {
+    filters.category = ''
+  }
+  fetchList()
+}
 
 function statusTagType(status: string) {
   const map: Record<string, string> = {
@@ -116,7 +165,9 @@ async function fetchList() {
   try {
     const res = await projectAPI.getList({
       category: filters.category || undefined,
-      publisher_role: filters.publisher_role || undefined
+      publisher_role: filters.publisher_role || undefined,
+      status: filters.status || undefined,
+      tag: filters.tag || undefined
     })
     list.value = res.data ?? []
   } finally {
@@ -125,6 +176,12 @@ async function fetchList() {
 }
 
 onMounted(() => {
+  const topFromQuery = route.query.top_category
+  if (topFromQuery === 'research' || topFromQuery === 'competition' || topFromQuery === 'innovation') {
+    filters.top_category = topFromQuery
+    onTopCategoryChange()
+    return
+  }
   fetchList()
 })
 </script>

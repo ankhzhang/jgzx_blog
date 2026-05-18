@@ -70,6 +70,28 @@
             </template>
           </el-result>
         </el-card>
+
+        <el-card class="category-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <h3>首页分类目录</h3>
+            </div>
+          </template>
+          <div class="category-grid">
+            <el-card class="category-item" shadow="hover" @click="goToCategory('research')">
+              <h4>科研</h4>
+              <p>查看教师科研相关项目与合作机会</p>
+            </el-card>
+            <el-card class="category-item" shadow="hover" @click="goToCategory('competition')">
+              <h4>竞赛</h4>
+              <p>快速浏览学科竞赛项目与组队需求</p>
+            </el-card>
+            <el-card class="category-item" shadow="hover" @click="goToCategory('innovation')">
+              <h4>大创项目</h4>
+              <p>查看创新类、创业类大创项目招募</p>
+            </el-card>
+          </div>
+        </el-card>
       </el-main>
     </el-container>
   </div>
@@ -130,6 +152,13 @@ const goToProfile = () => {
 // 跳转到项目列表
 const goToProjects = () => {
   router.push('/projects')
+}
+
+const goToCategory = (topCategory: 'research' | 'competition' | 'innovation') => {
+  router.push({
+    path: '/projects',
+    query: { top_category: topCategory }
+  })
 }
 
 onMounted(() => {
@@ -199,5 +228,37 @@ onMounted(() => {
   margin: 0;
   font-size: 16px;
   color: var(--el-text-color-primary);
+}
+
+.category-card {
+  margin-top: 20px;
+  border-radius: 8px;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.category-item {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.category-item:hover {
+  transform: translateY(-2px);
+}
+
+.category-item h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+}
+
+.category-item p {
+  margin: 0;
+  color: #606266;
+  font-size: 13px;
+  line-height: 1.5;
 }
 </style>

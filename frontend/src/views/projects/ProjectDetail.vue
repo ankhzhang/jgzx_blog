@@ -77,6 +77,12 @@
             <span v-if="project.published_at">审核通过：{{ formatDate(project.published_at) }}</span>
           </div>
         </div>
+        <CommentThread
+          v-if="project"
+          ref="commentThreadRef"
+          :project-id="project.id"
+          :can-post="authStore.isAuthenticated"
+        />
       </template>
     </el-card>
 
@@ -108,12 +114,15 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { projectAPI } from '@/api/project'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notification'
 import { formatDate } from '@/utils'
 import type { ProjectDetail, SkillItem } from '@/types/project'
+import CommentThread from '@/components/project/CommentThread.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 const loading = ref(true)
 const actionLoading = ref(false)
@@ -122,6 +131,7 @@ const closeRecruitVisible = ref(false)
 const closeTarget = ref<'recruit_full' | 'ended'>('recruit_full')
 const visibilityVisible = ref(false)
 const visibilityValue = ref(true)
+const commentThreadRef = ref<InstanceType<typeof CommentThread> | null>(null)
 
 const isAdmin = computed(() => authStore.isAdmin)
 const isOwnerOrAdmin = computed(() => {
@@ -155,6 +165,11 @@ async function fetchDetail() {
   try {
     const res = await projectAPI.getDetail(id)
     project.value = res.data
+    if (authStore.isAuthenticated) {
+      await projectAPI.markProjectCommentsRead(id)
+      await notificationStore.refreshUnreadCount()
+    }
+    await commentThreadRef.value?.fetchComments()
   } catch {
     project.value = null
   } finally {
