@@ -1,0 +1,45 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block content %}
+<div id="content-main">
+    <h1>确认驳回项目</h1>
+    
+    <p>您即将驳回以下 <strong>{{ queryset|length }}</strong> 个项目：</p>
+    
+    <ul>
+        {% for project in queryset %}
+        <li>
+            <strong>{{ project.title }}</strong> - 
+            作者: {{ project.author.username }} ({{ project.author.first_name }})
+        </li>
+        {% endfor %}
+    </ul>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <fieldset class="module aligned">
+            <div class="form-row">
+                {{ form.reject_reason.label_tag }}
+                {{ form.reject_reason }}
+                {% if form.reject_reason.errors %}
+                    <p class="errornote">{{ form.reject_reason.errors }}</p>
+                {% endif %}
+                <p class="help">请填写驳回理由，这将通知给项目作者。</p>
+            </div>
+        </fieldset>
+        
+        <div class="submit-row">
+            {% for obj in queryset %}
+            <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+            {% endfor %}
+            <input type="hidden" name="action" value="reject_projects">
+            <input type="hidden" name="apply" value="1">
+            
+            <input type="submit" class="default" style="background-color: #ba2121;" value="确认驳回">
+            <a href="{% url 'admin:jgzx_platform_project_changelist' %}" class="button cancel-link" style="margin-left: 10px;">取消</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

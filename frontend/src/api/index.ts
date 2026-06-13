@@ -73,17 +73,30 @@ class ApiClient {
           switch (status) {
             case 400:  // 表单验证错误
               if (responseData) {
-                // 处理字段级错误
-                Object.keys(responseData).forEach(key => {
+                const messages: string[] = []
+
+                if (typeof responseData.detail === 'string') {
+                  messages.push(responseData.detail)
+                }
+                if (typeof responseData.error === 'string') {
+                  messages.push(responseData.error)
+                }
+
+                Object.keys(responseData).forEach((key) => {
+                  if (key === 'detail' || key === 'error') return
                   const errors = responseData[key]
                   if (Array.isArray(errors)) {
-                    ElMessage.error(`${key}: ${errors.join(', ')}`)
+                    messages.push(...errors.map((item) => String(item)))
                   } else if (typeof errors === 'string') {
-                    ElMessage.error(`${key}: ${errors}`)
-                  } else {
-                    ElMessage.error(`${key}: 验证失败`)
+                    messages.push(errors)
                   }
                 })
+
+                if (messages.length > 0) {
+                  messages.forEach((msg) => ElMessage.error(msg))
+                } else {
+                  ElMessage.error('提交失败，请检查输入')
+                }
               }
               break
 

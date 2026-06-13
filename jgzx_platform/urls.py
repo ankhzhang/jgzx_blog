@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import userviews  # 指向更名后的 userview.py
 from . import projectviews
+from . import comment_thread_views
 
 # 使用 DefaultRouter 处理那些基于标准动作（如 List, Retrieve）的接口
 # 虽然你目前大多使用 APIView，但为了以后扩展方便，保留 Router 结构是好习惯
@@ -43,6 +44,10 @@ urlpatterns = [
     path('projects/<int:pk>/restore/', projectviews.ProjectRestoreView.as_view(), name='project-restore'),
     path('projects/<int:pk>/visibility/', projectviews.ProjectVisibilityView.as_view(), name='project-visibility'),
     path('projects/<int:pk>/delete/', projectviews.ProjectDeleteView.as_view(), name='project-delete'),
+    path('projects/<int:project_id>/comments/', comment_thread_views.ProjectCommentListCreateView.as_view(), name='project-comment-list-create'),
+    path('comments/<int:comment_id>/delete/', comment_thread_views.ProjectCommentDeleteView.as_view(), name='project-comment-delete'),
+    path('comments/unread-count/', comment_thread_views.CommentUnreadCountView.as_view(), name='comment-unread-count'),
+    path('projects/<int:project_id>/comments/mark-read/', comment_thread_views.ProjectCommentMarkReadView.as_view(), name='project-comment-mark-read'),
 
     # 包含 Router 生成的路由（如果未来增加了 ViewSet）
     path('', include(router.urls)),

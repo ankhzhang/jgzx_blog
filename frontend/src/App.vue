@@ -12,6 +12,16 @@
             <router-link to="/">首页</router-link>
             <router-link to="/profile">个人资料</router-link>
             <router-link to="/projects">项目</router-link>
+            <router-link to="/projects">
+              消息
+              <el-badge
+                v-if="notificationStore.unreadCommentCount > 0"
+                :value="notificationStore.unreadCommentCount"
+                :max="99"
+                class="message-badge"
+              />
+              <span v-else class="dot-placeholder" />
+            </router-link>
             <router-link v-if="authStore.isAdmin" to="/admin">管理</router-link>
           </div>
           <div class="user-info">
@@ -75,15 +85,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ArrowDown, Lock, OfficeBuilding, Plus, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notification'
 import { ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 const showGuestHeader = computed(() => {
   const path = route.path
@@ -113,6 +125,28 @@ const handleCommand = async (command: string) => {
     router.push(pathMap[command] || command)
   }
 }
+
+watch(
+  () => authStore.isAuthenticated,
+  (authenticated) => {
+    if (authenticated) {
+      notificationStore.startPolling()
+    } else {
+      notificationStore.clear()
+    }
+  },
+  { immediate: true }
+)
+
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    notificationStore.startPolling()
+  }
+})
+
+onUnmounted(() => {
+  notificationStore.stopPolling()
+})
 </script>
 
 <style scoped>
@@ -155,6 +189,14 @@ const handleCommand = async (command: string) => {
   color: #333;
   text-decoration: none;
   font-size: 14px;
+}
+
+.message-badge {
+  margin-left: 6px;
+}
+
+.dot-placeholder {
+  margin-left: 6px;
 }
 
 .nav-menu a.router-link-active {

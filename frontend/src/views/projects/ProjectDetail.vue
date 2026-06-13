@@ -5,43 +5,52 @@
         <el-empty v-if="!loading" description="项目不存在或无权查看" />
       </template>
       <template v-else>
-        <div class="detail-header flex-between">
-          <div>
-            <h2 class="title">{{ project.title }}</h2>
+        <div class="detail-header">
+          <h2 class="title">{{ project.title }}</h2>
+          <div class="header-bottom">
             <div class="meta-row">
               <el-tag :type="statusTagType(project.status)">{{ project.status_display }}</el-tag>
               <el-tag>{{ project.category_display }}</el-tag>
               <el-tag type="info">{{ project.publisher_role_display }}</el-tag>
+              <el-tag
+                v-for="tag in (project.tags || [])"
+                :key="tag"
+                type="warning"
+                size="small"
+              >
+                {{ tag }}
+              </el-tag>
               <span class="meta-text">招募 {{ project.recruit_count }} 人</span>
+              <span v-if="project.contact_info" class="meta-text">联系方式：{{ project.contact_info }}</span>
               <span class="meta-text">截止 {{ formatDate(project.deadline) }}</span>
             </div>
-          </div>
-          <div v-if="isOwnerOrAdmin" class="actions">
-            <el-button v-if="canEdit" @click="$router.push(`/projects/${project.id}/edit`)">
-              编辑
-            </el-button>
-            <template v-if="project.status === 'draft'">
-              <el-button type="primary" :loading="actionLoading" @click="doSubmit">提交审核</el-button>
-              <el-button type="danger" :loading="actionLoading" @click="doDelete">删除</el-button>
-            </template>
-            <template v-else-if="project.status === 'pending'">
-              <el-button :loading="actionLoading" @click="doWithdraw">撤回审核</el-button>
-            </template>
-            <template v-else-if="['published', 'recruit_full', 'ended'].includes(project.status)">
-              <el-button
-                v-if="project.status === 'published'"
-                :loading="actionLoading"
-                @click="openCloseRecruit"
-              >
-                关闭招募
+            <div v-if="isOwnerOrAdmin" class="actions">
+              <el-button v-if="canEdit" @click="$router.push(`/projects/${project.id}/edit`)">
+                编辑
               </el-button>
-              <el-button type="primary" link @click="openVisibility">
-                {{ project.is_visible_when_ended ? '设为结束不可见' : '设为结束可见' }}
-              </el-button>
-            </template>
-            <template v-if="project.status === 'offline' && isAdmin">
-              <el-button type="primary" :loading="actionLoading" @click="doRestore">恢复上架</el-button>
-            </template>
+              <template v-if="project.status === 'draft'">
+                <el-button type="primary" :loading="actionLoading" @click="doSubmit">提交审核</el-button>
+                <el-button type="danger" :loading="actionLoading" @click="doDelete">删除</el-button>
+              </template>
+              <template v-else-if="project.status === 'pending'">
+                <el-button :loading="actionLoading" @click="doWithdraw">撤回审核</el-button>
+              </template>
+              <template v-else-if="['published', 'recruit_full', 'ended'].includes(project.status)">
+                <el-button
+                  v-if="project.status === 'published'"
+                  :loading="actionLoading"
+                  @click="openCloseRecruit"
+                >
+                  关闭招募
+                </el-button>
+                <el-button @click="openVisibility">
+                  {{ project.is_visible_when_ended ? '设为结束不可见' : '设为结束可见' }}
+                </el-button>
+              </template>
+              <template v-if="project.status === 'offline' && isAdmin">
+                <el-button type="primary" :loading="actionLoading" @click="doRestore">恢复上架</el-button>
+              </template>
+            </div>
           </div>
         </div>
 
@@ -77,6 +86,12 @@
             <span v-if="project.published_at">审核通过：{{ formatDate(project.published_at) }}</span>
           </div>
         </div>
+        <CommentThread
+          v-if="project"
+          ref="commentThreadRef"
+          :project-id="project.id"
+          :can-post="authStore.isAuthenticated"
+        />
       </template>
     </el-card>
 
@@ -108,12 +123,15 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { projectAPI } from '@/api/project'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notification'
 import { formatDate } from '@/utils'
 import type { ProjectDetail, SkillItem } from '@/types/project'
+import CommentThread from '@/components/project/CommentThread.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 const loading = ref(true)
 const actionLoading = ref(false)
@@ -122,6 +140,7 @@ const closeRecruitVisible = ref(false)
 const closeTarget = ref<'recruit_full' | 'ended'>('recruit_full')
 const visibilityVisible = ref(false)
 const visibilityValue = ref(true)
+const commentThreadRef = ref<InstanceType<typeof CommentThread> | null>(null)
 
 const isAdmin = computed(() => authStore.isAdmin)
 const isOwnerOrAdmin = computed(() => {
@@ -155,6 +174,11 @@ async function fetchDetail() {
   try {
     const res = await projectAPI.getDetail(id)
     project.value = res.data
+    if (authStore.isAuthenticated) {
+      await projectAPI.markProjectCommentsRead(id)
+      await notificationStore.refreshUnreadCount()
+    }
+    await commentThreadRef.value?.fetchComments()
   } catch {
     project.value = null
   } finally {
@@ -270,10 +294,18 @@ onMounted(fetchDetail)
 }
 
 .detail-header .title {
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
   font-size: 22px;
   font-weight: 600;
   color: #333;
+}
+
+.header-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
 }
 
 .meta-row {
@@ -281,6 +313,16 @@ onMounted(fetchDetail)
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .meta-text {
