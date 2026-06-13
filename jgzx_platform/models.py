@@ -76,6 +76,7 @@ class Project(models.Model):
         '状态', max_length=20, choices=STATUS_CHOICES, default='draft'
     )
     recruit_count = models.PositiveSmallIntegerField('招募人数', default=1)
+    contact_info = models.CharField('联系方式', max_length=200, blank=True, default='')
     skill_requirements = models.JSONField('技能要求', default=list, blank=True)
     # 你的 tags 字段
     tags = models.JSONField('标签', default=list, blank=True)

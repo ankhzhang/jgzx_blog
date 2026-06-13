@@ -31,6 +31,15 @@
             <el-option label="大创项目-创业类" value="innovation_venture" />
           </el-select>
         </el-form-item>
+        <el-form-item label="自定义标签">
+          <el-input-tag
+            v-model="form.tags"
+            placeholder="输入后按回车添加，如 AI、深度学习"
+            :max="5"
+            style="width: 100%"
+          />
+          <div class="form-tip block-tip">用于补充项目方向，与上方类别不同，最多 5 个，每个不超过 20 字</div>
+        </el-form-item>
         <el-form-item label="项目描述" prop="description">
           <el-input
             v-model="form.description"
@@ -46,6 +55,14 @@
             v-model="form.recruit_count"
             :min="1"
             :max="20"
+          />
+        </el-form-item>
+        <el-form-item label="联系方式" prop="contact_info">
+          <el-input
+            v-model="form.contact_info"
+            placeholder="如：手机号、微信号、邮箱等，方便感兴趣的同学联系"
+            maxlength="200"
+            show-word-limit
           />
         </el-form-item>
         <el-form-item label="技能要求" prop="skill_requirements">
@@ -124,11 +141,13 @@ const router = useRouter()
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
 
-const form = reactive<ProjectCreateUpdatePayload & { skill_requirements: { desc: string; count: number }[] }>({
+const form = reactive<ProjectCreateUpdatePayload & { skill_requirements: { desc: string; count: number }[]; tags: string[] }>({
   title: '',
   description: '',
   category: 'teacher_research',
   recruit_count: 1,
+  contact_info: '',
+  tags: [],
   skill_requirements: [],
   deadline: '',
   is_visible_when_ended: true
@@ -147,6 +166,10 @@ const rules: FormRules = {
   recruit_count: [
     { required: true, message: '请填写招募人数', trigger: 'blur' },
     { type: 'number', min: 1, max: 20, message: '1–20', trigger: 'blur' }
+  ],
+  contact_info: [
+    { required: true, message: '请填写联系方式', trigger: 'blur' },
+    { min: 1, max: 200, message: '1–200 字', trigger: 'blur' }
   ],
   deadline: [{ required: true, message: '请选择截止时间', trigger: 'change' }]
 }
@@ -174,8 +197,10 @@ async function submit(isDraft: boolean) {
   }
   submitting.value = true
   try {
+    const tags = form.tags.map((t) => t.trim()).filter(Boolean)
     const res = await projectAPI.create({
       ...form,
+      tags,
       skill_requirements: skills,
       is_draft: isDraft
     })
@@ -214,5 +239,10 @@ async function submit(isDraft: boolean) {
   margin-left: 8px;
   font-size: 12px;
   color: #909399;
+}
+
+.block-tip {
+  margin-left: 0;
+  margin-top: 6px;
 }
 </style>
