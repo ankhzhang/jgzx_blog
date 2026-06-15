@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from .models import UserProfile, Project
+from .moderation import raise_if_sensitive
 
 
 # ==========================================
@@ -216,6 +217,33 @@ def _validate_skill_requirements(value, recruit_count):
         )
 
 
+def _validate_tags(value):
+    """自定义标签：字符串数组，最多 5 个，每个 1–20 字"""
+    if not value:
+        return []
+    if not isinstance(value, list):
+        raise serializers.ValidationError('标签必须是数组')
+    if len(value) > 5:
+        raise serializers.ValidationError('标签最多 5 个')
+    normalized = []
+    seen = set()
+    for i, item in enumerate(value):
+        if not isinstance(item, str):
+            raise serializers.ValidationError(f'第 {i+1} 个标签格式不正确')
+        s = item.strip()
+        if not s:
+            continue
+        if len(s) > 20:
+            raise serializers.ValidationError(f'第 {i+1} 个标签不超过 20 字')
+        if s in seen:
+            continue
+        seen.add(s)
+        normalized.append(s)
+    if len(normalized) > 5:
+        raise serializers.ValidationError('标签最多 5 个')
+    return normalized
+
+
 class ProjectListSerializer(serializers.ModelSerializer):
     """项目列表（公开/我的）"""
     publisher_name = serializers.CharField(source='publisher.first_name', read_only=True)
@@ -228,7 +256,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'title', 'category', 'category_display', 'status', 'status_display',
             'publisher_role', 'publisher_role_display', 'publisher_name',
-            'recruit_count', 'deadline', 'created_at', 'published_at',
+            'recruit_count', 'tags', 'deadline', 'created_at', 'published_at',
             'is_visible_when_ended', 'version'
         )
 
@@ -247,7 +275,7 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'publisher_id', 'publisher_name', 'publisher_username', 'publisher_role',
             'publisher_role_display', 'title', 'description', 'category', 'category_display',
-            'status', 'status_display', 'recruit_count', 'skill_requirements', 'deadline',
+            'status', 'status_display', 'recruit_count', 'contact_info', 'tags', 'skill_requirements', 'deadline',
             'is_visible_when_ended', 'offline_reason', 'offline_at', 'reject_reason',
             'submitted_at', 'published_at', 'created_at', 'updated_at', 'version'
         )
@@ -256,11 +284,12 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
 class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
     """创建/更新项目（标题、描述、类别、招募人数、技能要求、截止时间、是否结束可见）"""
     skill_requirements = serializers.JSONField(required=False, default=list)
+    tags = serializers.JSONField(required=False, default=list)
 
     class Meta:
         model = Project
         fields = (
-            'title', 'description', 'category', 'recruit_count',
+            'title', 'description', 'category', 'recruit_count', 'contact_info', 'tags',
             'skill_requirements', 'deadline', 'is_visible_when_ended'
         )
 
@@ -270,6 +299,7 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('标题不能为空')
         if len(s) > 100:
             raise serializers.ValidationError('标题不超过 100 字')
+        raise_if_sensitive(s, '标题')
         return s
 
     def validate_description(self, value):
@@ -278,6 +308,7 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('项目描述至少 100 字')
         if len(s) > 5000:
             raise serializers.ValidationError('项目描述不超过 5000 字')
+        raise_if_sensitive(s, '项目描述')
         return s
 
     def validate_recruit_count(self, value):
@@ -286,6 +317,18 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
         if not isinstance(value, int) or value < 1 or value > 20:
             raise serializers.ValidationError('招募人数须为 1–20')
         return value
+
+    def validate_contact_info(self, value):
+        s = (value or '').strip()
+        if len(s) > 200:
+            raise serializers.ValidationError('联系方式不超过 200 字')
+        return s
+
+    def validate_tags(self, value):
+        tags = _validate_tags(value)
+        for tag in tags:
+            raise_if_sensitive(tag, '自定义标签')
+        return tags
 
     def validate_deadline(self, value):
         if not value:
@@ -306,6 +349,13 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
         skill = attrs.get('skill_requirements')
         if skill is not None:
             _validate_skill_requirements(skill, recruit_count or 1)
+            for item in skill:
+                if isinstance(item, dict):
+                    desc = (item.get('desc') or item.get('text') or '').strip()
+                    if desc:
+                        raise_if_sensitive(desc, '技能要求')
+                elif isinstance(item, str) and item.strip():
+                    raise_if_sensitive(item.strip(), '技能要求')
         return attrs
 
 

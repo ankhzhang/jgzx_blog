@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import ProjectThreadComment
+from .moderation import raise_if_sensitive
 
 
 class CommentCreateSerializer(serializers.Serializer):
@@ -10,6 +11,7 @@ class CommentCreateSerializer(serializers.Serializer):
         text = (value or '').strip()
         if len(text) < 2:
             raise serializers.ValidationError('评论内容至少 2 个字符')
+        raise_if_sensitive(text, '评论内容')
         return text
 
 
