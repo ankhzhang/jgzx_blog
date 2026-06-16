@@ -21,6 +21,7 @@ class UserProfile(models.Model):
     department = models.CharField('部门', max_length=100, blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     bio = models.TextField(blank=True)
+    major = models.CharField('专业', max_length=100, blank=True)  # 新增专业字段
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

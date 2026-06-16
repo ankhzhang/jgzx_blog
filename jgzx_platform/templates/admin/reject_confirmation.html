@@ -11,7 +11,7 @@
         {% for project in queryset %}
         <li>
             <strong>{{ project.title }}</strong> - 
-            作者: {{ project.author.username }} ({{ project.author.first_name }})
+            作者: {{ project.publisher.username }} {{ project.publisher.last_name }}({{ project.publisher.first_name }})
         </li>
         {% endfor %}
     </ul>

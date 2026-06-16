@@ -34,7 +34,11 @@
           <div class="profile-info">
             <div class="info-item">
               <el-icon><User /></el-icon>
-              <span>用户名：{{ user?.username }}</span>
+              <span>{{ user?.identity === 'student' ? '学号' : '工号' }}：{{ user?.username }}</span>
+            </div>
+            <div class="info-item">
+              <el-icon><User /></el-icon>
+              <span>真实姓名：{{ user?.real_name || '未填写' }}</span>
             </div>
             <div class="info-item">
               <el-icon><OfficeBuilding /></el-icon>
@@ -43,10 +47,6 @@
             <div class="info-item">
               <el-icon><Phone /></el-icon>
               <span>手机：{{ user?.phone || '未填写' }}</span>
-            </div>
-            <div class="info-item">
-              <el-icon><Message /></el-icon>
-              <span>邮箱：{{ user?.email || '未设置' }}</span>
             </div>
             <div class="info-item">
               <el-icon><Clock /></el-icon>
@@ -70,6 +70,9 @@
             :rules="profileRules"
             label-width="80px"
           >
+            <el-form-item label="昵称" prop="nick_name">
+              <el-input v-model="profileForm.nick_name" placeholder="请输入昵称" />
+            </el-form-item>
             <el-form-item label="院系" prop="department">
               <el-select
                 v-model="profileForm.department"
@@ -84,7 +87,9 @@
                 />
               </el-select>
             </el-form-item>
-
+            <el-form-item label="专业" prop="major">
+              <el-input v-model="profileForm.major" placeholder="请输入专业" />
+            </el-form-item>
             <el-form-item label="手机号" prop="phone">
               <el-input
                 v-model="profileForm.phone"
@@ -94,10 +99,10 @@
 
             <el-form-item label="个人简介" prop="bio">
               <el-input
-                v-model="profileForm.bio"
                 type="textarea"
-                :rows="4"
-                placeholder="介绍一下自己吧"
+                v-model="profileForm.bio"
+                :rows="3"
+                placeholder="请介绍一下自己，学生需要输入年级"
               />
             </el-form-item>
 
@@ -158,6 +163,8 @@ const fullName = computed(() => authStore.fullName)
 
 const profileForm = reactive({
   department: '',
+  major: '',
+  nick_name: '',
   phone: '',
   bio: ''
 })

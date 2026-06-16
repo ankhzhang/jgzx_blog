@@ -14,14 +14,15 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     """
     负责 User 和 UserProfile 的同步创建。
     - username: 学号/工号
-    - first_name: 真实姓名
+    - first_name: 昵称
+    - last_name: 真实姓名
     - email: 设为非必填 (required=False)
     - password: 自动哈希加密存储 (set_password)
     """
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)
-    real_name = serializers.CharField(source='first_name', required=True, allow_blank=False)
-
+    real_name = serializers.CharField(source='last_name', required=True, allow_blank=False)
+    nick_name = serializers.CharField(source='first_name', required=True, allow_blank=False)
     # 业务身份与扩展字段
     identity = serializers.ChoiceField(choices=UserProfile.IDENTITY_CHOICES, required=True)
     phone = serializers.CharField(required=True, allow_blank=True)
@@ -29,7 +30,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'password', 'password2', 'real_name',
+        fields = ('username', 'password', 'password2', 'real_name', 'nick_name',
                   'identity', 'phone', 'department')
         extra_kwargs = {
             'username': {'required': True, 'allow_blank': False,
@@ -110,15 +111,16 @@ class BulkUserRegisterSerializer(serializers.Serializer):
 # ==========================================
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
-    real_name = serializers.CharField(source='user.first_name', read_only=True)
+    real_name = serializers.CharField(source='user.last_name', read_only=True)
+    nick_name = serializers.CharField(source='user.first_name', read_only=True)
     date_joined = serializers.DateTimeField(source='user.date_joined', read_only=True)
     # ✅ 暴露 is_staff 字段
     is_staff = serializers.BooleanField(source='user.is_staff', read_only=True)
 
     class Meta:
         model = UserProfile
-        fields = ('id', 'username', 'real_name', 'identity', 'phone', 'department',
-                  'avatar', 'bio', 'project_count', 'comment_count',
+        fields = ('id', 'username', 'real_name', 'nick_name', 'identity', 'phone', 'department',
+                  'avatar', 'bio', 'project_count', 'comment_count', 'major',
                   'is_banned', 'date_joined', 'created_at', 'updated_at', 'is_staff')
         # 核心业务字段只读，防止通过该接口被篡改
         read_only_fields = ('identity', 'project_count', 'comment_count', 'is_banned', 'is_staff')
@@ -131,22 +133,25 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     """
     展平化设计：前端直接发送 phone, department, bio 等字段
     仅允许用户更新：联系电话、部门、个人简介、头像。
-    禁止更新：真实姓名、学号、身份。
+    禁止更新：学号(username)、身份、last_name（真实姓名）
+    first_name（昵称）、last_name（真实姓名）
     """
     phone = serializers.CharField(source='profile.phone', required=False, allow_blank=True)
     department = serializers.CharField(source='profile.department', required=False, allow_blank=True)
     bio = serializers.CharField(source='profile.bio', required=False, allow_blank=True)
     avatar = serializers.ImageField(source='profile.avatar', required=False)
-
+    major = serializers.CharField(source='profile.major', required=False, allow_blank=True)
+    nick_name = serializers.CharField(source='user.first_name', required=True, allow_blank=False)
     # 身份和学号注册后不可自改
     identity = serializers.CharField(source='profile.identity', read_only=True)
     username = serializers.CharField(read_only=True)
-    real_name = serializers.CharField(source='user.first_name', read_only=True)
+    real_name = serializers.CharField(source='user.last_name', read_only=True)
+
 
     class Meta:
         model = User
-        fields = ('real_name', 'username', 'identity', 'phone', 'department', 'bio', 'avatar')
-        read_only_fields = ('real_name', 'account', 'identity')
+        fields = ('real_name', 'nick_name', 'username', 'identity', 'phone', 'department', 'bio', 'avatar', 'major')
+        read_only_fields = ('real_name', 'username', 'identity')
 
     def update(self, instance, validated_data):
         # 1. 处理展平的 Profile 数据 (DRF source 机制会将其放入 'profile' key 中)
@@ -154,7 +159,10 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
         # 2. 更新 User 表
         # 如果未来有 User 表的其他非核心字段修改，可在此扩展
-
+        user_data = validated_data.pop('user', {})
+        if 'first_name' in user_data:
+            instance.first_name = user_data['first_name']
+            instance.save()
         # 3. 更新 UserProfile 表
         profile = instance.profile
         for attr, value in profile_data.items():

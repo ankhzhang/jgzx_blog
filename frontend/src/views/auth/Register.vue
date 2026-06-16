@@ -54,6 +54,14 @@
             clearable
           />
         </el-form-item>
+        <el-form-item label="昵称" prop="nick_name">
+          <el-input
+            v-model="registerForm.nick_name"
+            placeholder="请输入昵称"
+            clearable
+          />
+        </el-form-item>
+
 
         <el-form-item label="密码" prop="password">
           <el-input
@@ -154,6 +162,7 @@ const registerForm = reactive<RegisterData>({
   identity: 'student',
   username: '',
   real_name: '',
+  nick_name: '',
   password: '',
   password2: '',
   phone: '',
@@ -207,19 +216,22 @@ const registerRules: FormRules = {
     { required: true, message: '请选择身份', trigger: 'change' }
   ],
   username: [
-    { validator: validateUsername, trigger: 'blur' }
+    { required: true, validator: validateUsername, trigger: 'blur' }
   ],
   real_name: [
     { required: true, message: '请输入姓名', trigger: 'blur' }
   ],
+  nick_name: [
+    { required: true, message: '请输入昵称', trigger: 'blur' }
+  ],
   password: [
-    { validator: validatePassword, trigger: 'blur' }
+    { required: true, validator: validatePassword, trigger: 'blur' }
   ],
   password2: [
-    { validator: validatePassword2, trigger: 'blur' }
+    { required: true, validator: validatePassword2, trigger: 'blur' }
   ],
   phone: [
-    { validator: validatePhone, trigger: 'blur' }
+    { required: true, validator: validatePhone, trigger: 'blur' }
   ],
   department: [
     { required: true, message: '请选择院系', trigger: 'change' }

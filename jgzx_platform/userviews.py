@@ -87,6 +87,10 @@ class LogoutView(views.APIView):
     def post(self, request):
         Token.objects.filter(user=request.user).delete()
         logout(request)
+        # 彻底清除 session
+        request.session.flush()
+        # 设置 session 过期时间为 2 小时（7200秒）
+        request.session.set_expiry(7200)
         return Response({'message': '登出成功'})
 
 

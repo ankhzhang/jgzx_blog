@@ -119,11 +119,11 @@ class ProjectAdmin(admin.ModelAdmin):
     """项目管理后台，支持审核流"""
 
     # 列表显示
-    list_display = ('title', 'publisher', 'status_colored', 'created_at', 'reviewed_by', 'reviewed_at')
+    list_display = ('title', 'publisher_info', 'publisher_nickname','status_colored', 'created_at', 'reviewed_by', 'reviewed_at')
     list_filter = ('status', 'created_at', 'reviewed_at')
 
     # 搜索功能（全局搜索）
-    search_fields = ('title', 'description', 'publisher__username', 'publisher__first_name', 'reject_reason')
+    search_fields = ('title', 'description', 'publisher__username', 'publisher__first_name', 'publisher__last_name','reject_reason')
 
     # 日期分层
     date_hierarchy = 'created_at'
@@ -151,6 +151,21 @@ class ProjectAdmin(admin.ModelAdmin):
 
     # 自定义按钮
     change_list_template = 'admin/project_change_list.html'
+
+    # 自定义字段
+    def publisher_info(self, obj):
+        """显示用户名+真实姓名"""
+        username = obj.publisher.username
+        real_name = obj.publisher.last_name  # 真实姓名存在 last_name 中
+        if real_name:
+            return f"{username} ({real_name})"
+        return username
+    publisher_info.short_description = '发布者'
+
+    def publisher_nickname(self, obj):
+        """显示昵称"""
+        return obj.publisher.first_name  # 昵称存在 first_name 中
+    publisher_nickname.short_description = '昵称'
 
     def status_colored(self, obj):
         """带徽章样式的状态显示"""

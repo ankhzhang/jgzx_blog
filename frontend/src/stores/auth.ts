@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
     // 管理员判断：后端会返回管理员标记
     return user.value?.is_staff === true
   })
-  const fullName = computed(() => user.value?.real_name || user.value?.username || '')
+  const fullName = computed(() => user.value?.nick_name || user.value?.real_name || user.value?.username || '')
 
   // ========== Actions ==========
   /**
