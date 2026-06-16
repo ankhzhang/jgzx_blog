@@ -33,6 +33,7 @@ export interface ProjectListItem {
   publisher_role_display: string
   publisher_name: string
   recruit_count: number
+  tags?: string[]
   deadline: string
   created_at: string
   published_at: string | null
@@ -42,6 +43,7 @@ export interface ProjectListItem {
 
 export interface ProjectDetail extends ProjectListItem {
   description: string
+  contact_info: string
   publisher_id: number
   publisher_username: string
   skill_requirements: SkillItem[]
@@ -58,6 +60,8 @@ export interface ProjectCreateUpdatePayload {
   description: string
   category: ProjectCategory
   recruit_count: number
+  contact_info?: string
+  tags?: string[]
   skill_requirements?: SkillItem[]
   deadline: string
   is_visible_when_ended?: boolean

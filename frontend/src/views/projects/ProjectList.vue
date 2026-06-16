@@ -93,6 +93,14 @@
           <div class="card-meta">
             <el-tag size="small">{{ item.category_display }}</el-tag>
             <el-tag size="small" type="info">{{ item.publisher_role_display }}</el-tag>
+            <el-tag
+              v-for="tag in (item.tags || [])"
+              :key="tag"
+              size="small"
+              type="warning"
+            >
+              {{ tag }}
+            </el-tag>
             <span class="meta-text">招募 {{ item.recruit_count }} 人</span>
             <span class="meta-text">截止 {{ formatDate(item.deadline, 'YYYY-MM-DD') }}</span>
           </div>
