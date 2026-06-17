@@ -17,10 +17,8 @@ export type ProjectStatus =
   | 'offline'
 export type PublisherRole = 'student' | 'teacher'
 
-/** 技能要求：带人数 或 简单字符串 */
-export type SkillItem =
-  | { desc: string; count: number }
-  | string
+/** 技能要求（字符串描述；读取时兼容旧格式 { desc, count }） */
+export type SkillItem = string | { desc: string; count?: number }
 
 export interface ProjectListItem {
   id: number

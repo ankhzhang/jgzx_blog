@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from .models import UserProfile, Project
+from .models import UserProfile, Project, ProjectThreadComment
 from .moderation import raise_if_sensitive
 
 
@@ -110,20 +110,35 @@ class BulkUserRegisterSerializer(serializers.Serializer):
 # 3. 用户资料展示序列化器 (包含所有扩展字段)
 # ==========================================
 class UserProfileSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
     username = serializers.CharField(source='user.username', read_only=True)
     real_name = serializers.CharField(source='user.last_name', read_only=True)
     nick_name = serializers.CharField(source='user.first_name', read_only=True)
     date_joined = serializers.DateTimeField(source='user.date_joined', read_only=True)
     # ✅ 暴露 is_staff 字段
     is_staff = serializers.BooleanField(source='user.is_staff', read_only=True)
+    project_count = serializers.SerializerMethodField()
+    comment_count = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
-        fields = ('id', 'username', 'real_name', 'nick_name', 'identity', 'phone', 'department',
+        fields = ('id', 'user_id', 'username', 'real_name', 'nick_name', 'identity', 'phone', 'department',
                   'avatar', 'bio', 'project_count', 'comment_count', 'major',
                   'is_banned', 'date_joined', 'created_at', 'updated_at', 'is_staff')
         # 核心业务字段只读，防止通过该接口被篡改
-        read_only_fields = ('identity', 'project_count', 'comment_count', 'is_banned', 'is_staff')
+        read_only_fields = ('identity', 'is_banned', 'is_staff')
+
+    def get_project_count(self, obj):
+        return Project.objects.filter(
+            publisher=obj.user,
+            deleted_at__isnull=True,
+        ).count()
+
+    def get_comment_count(self, obj):
+        return ProjectThreadComment.objects.filter(
+            author=obj.user,
+            is_deleted=False,
+        ).count()
 
 
 # ==========================================
@@ -190,39 +205,28 @@ class ChangePasswordSerializer(serializers.Serializer):
 # 项目发布模块 — 序列化器
 # ==========================================
 
-def _validate_skill_requirements(value, recruit_count):
-    """技能要求：支持 [{"desc":"...", "count": n}] 或 ["str", ...]"""
+def _normalize_skill_requirements(value):
+    """技能要求：字符串数组，最多 10 条；兼容旧数据 {"desc":"...", "count": n}"""
     if not value:
-        return
+        return []
     if not isinstance(value, list):
         raise serializers.ValidationError('技能要求必须是数组')
     if len(value) > 10:
         raise serializers.ValidationError('技能要求最多 10 条')
-    total = 0
+    normalized = []
     for i, item in enumerate(value):
         if isinstance(item, dict):
-            desc = item.get('desc') or item.get('text') or ''
-            cnt = item.get('count', 1)
-            if not isinstance(desc, str) or len(desc.strip()) == 0:
-                raise serializers.ValidationError(f'第 {i+1} 条描述不能为空')
-            if len(desc) > 100:
-                raise serializers.ValidationError(f'第 {i+1} 条描述不超过 100 字')
-            if not isinstance(cnt, int) or cnt < 1 or cnt > 10:
-                raise serializers.ValidationError(f'第 {i+1} 条人数须为 1–10')
-            total += cnt
+            desc = (item.get('desc') or item.get('text') or '').strip()
         elif isinstance(item, str):
-            s = (item or '').strip()
-            if len(s) == 0:
-                raise serializers.ValidationError(f'第 {i+1} 条不能为空')
-            if len(s) > 50:
-                raise serializers.ValidationError(f'第 {i+1} 条不超过 50 字')
-            total += 1
+            desc = item.strip()
         else:
             raise serializers.ValidationError(f'第 {i+1} 条格式不正确')
-    if total > recruit_count:
-        raise serializers.ValidationError(
-            f'技能需求总人数({total})不能超过招募人数({recruit_count})'
-        )
+        if not desc:
+            raise serializers.ValidationError(f'第 {i+1} 条不能为空')
+        if len(desc) > 100:
+            raise serializers.ValidationError(f'第 {i+1} 条不超过 100 字')
+        normalized.append(desc)
+    return normalized
 
 
 def _validate_tags(value):
@@ -351,19 +355,12 @@ class ProjectCreateUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        recruit_count = attrs.get('recruit_count')
-        if recruit_count is None and self.instance:
-            recruit_count = self.instance.recruit_count
         skill = attrs.get('skill_requirements')
         if skill is not None:
-            _validate_skill_requirements(skill, recruit_count or 1)
-            for item in skill:
-                if isinstance(item, dict):
-                    desc = (item.get('desc') or item.get('text') or '').strip()
-                    if desc:
-                        raise_if_sensitive(desc, '技能要求')
-                elif isinstance(item, str) and item.strip():
-                    raise_if_sensitive(item.strip(), '技能要求')
+            normalized = _normalize_skill_requirements(skill)
+            attrs['skill_requirements'] = normalized
+            for desc in normalized:
+                raise_if_sensitive(desc, '技能要求')
         return attrs
 
 

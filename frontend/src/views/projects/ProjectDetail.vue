@@ -77,7 +77,7 @@
           <h4 v-if="skillList.length">技能要求</h4>
           <ul v-if="skillList.length" class="skill-list">
             <li v-for="(s, i) in skillList" :key="i">
-              {{ typeof s === 'string' ? s : `${(s as { desc: string }).desc}（${(s as { count: number }).count} 人）` }}
+              {{ formatSkill(s) }}
             </li>
           </ul>
           <div class="publisher-info">
@@ -145,7 +145,8 @@ const commentThreadRef = ref<InstanceType<typeof CommentThread> | null>(null)
 const isAdmin = computed(() => authStore.isAdmin)
 const isOwnerOrAdmin = computed(() => {
   if (!project.value || !authStore.user) return false
-  return project.value.publisher_id === authStore.user.id || authStore.isAdmin
+  const currentUserId = authStore.user.user_id ?? authStore.user.id
+  return project.value.publisher_id === currentUserId || authStore.isAdmin
 })
 const canEdit = computed(() => {
   const p = project.value
@@ -154,6 +155,10 @@ const canEdit = computed(() => {
 })
 
 const skillList = computed(() => project.value?.skill_requirements ?? [])
+
+function formatSkill(s: SkillItem): string {
+  return typeof s === 'string' ? s : (s.desc || '')
+}
 
 function statusTagType(status: string) {
   const map: Record<string, string> = {

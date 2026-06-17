@@ -181,9 +181,12 @@ const profileRules: FormRules = {
   ]
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await authStore.fetchProfile()
   if (user.value) {
     profileForm.department = user.value.department || ''
+    profileForm.major = user.value.major || ''
+    profileForm.nick_name = user.value.nick_name || ''
     profileForm.phone = user.value.phone || ''
     profileForm.bio = user.value.bio || ''
   }
