@@ -7,6 +7,7 @@ export interface UserProfile {
   user_id: number         // auth_user 主键，与 publisher_id 一致
   username: string        // 学号/工号
   real_name: string       // 真实姓名
+  nick_name: string       // 昵称
   identity: 'student' | 'teacher'  // 身份标签
   phone: string          // 联系电话
   department: string     // 部门/院系
@@ -38,6 +39,7 @@ export interface RegisterData {
   password: string
   password2: string   // 确认密码
   real_name: string   // 真实姓名
+  nick_name: string   // 昵称
   identity: 'student' | 'teacher'  // 身份
   phone: string      // 联系电话（必填）
   department?: string // 部门/院系（可选）
