@@ -60,20 +60,14 @@
           <el-form-item label="技能要求">
             <div class="skill-editor">
               <div
-                v-for="(item, index) in form.skill_requirements"
+                v-for="(_item, index) in form.skill_requirements"
                 :key="index"
                 class="skill-row"
               >
                 <el-input
-                  v-model="(item as { desc: string; count: number }).desc"
-                  placeholder="描述"
+                  v-model="form.skill_requirements[index]"
+                  placeholder="如：Python、C++"
                   style="flex: 1; margin-right: 8px"
-                />
-                <el-input-number
-                  v-model="(item as { desc: string; count: number }).count"
-                  :min="1"
-                  :max="10"
-                  style="width: 100px"
                 />
                 <el-button type="danger" link @click="form.skill_requirements.splice(index, 1)">
                   删除
@@ -83,7 +77,7 @@
                 v-if="form.skill_requirements.length < 10"
                 type="primary"
                 link
-                @click="form.skill_requirements.push({ desc: '', count: 1 })"
+                @click="form.skill_requirements.push('')"
               >
                 + 添加一条
               </el-button>
@@ -129,7 +123,7 @@ const submitting = ref(false)
 const project = ref<ProjectDetail | null>(null)
 const formRef = ref<FormInstance>()
 
-const form = reactive<ProjectCreateUpdatePayload & { skill_requirements: { desc: string; count: number }[]; tags: string[] }>({
+const form = reactive<ProjectCreateUpdatePayload & { skill_requirements: string[]; tags: string[] }>({
   title: '',
   description: '',
   category: 'teacher_research',
@@ -184,9 +178,9 @@ async function loadProject() {
     form.is_visible_when_ended = p.is_visible_when_ended
     const skills = p.skill_requirements || []
     form.skill_requirements = skills.map((s: SkillItem) =>
-      typeof s === 'string' ? { desc: s, count: 1 } : { desc: s.desc, count: s.count }
+      typeof s === 'string' ? s : (s.desc || '')
     )
-    if (form.skill_requirements.length === 0) form.skill_requirements.push({ desc: '', count: 1 })
+    if (form.skill_requirements.length === 0) form.skill_requirements.push('')
   } finally {
     loading.value = false
   }
@@ -199,9 +193,9 @@ async function submit() {
   } catch {
     return
   }
-  const skills: SkillItem[] = form.skill_requirements
-    .filter((s) => (s as { desc: string }).desc?.trim())
-    .map((s) => ({ desc: (s as { desc: string }).desc.trim(), count: (s as { count: number }).count }))
+  const skills = form.skill_requirements
+    .map((s) => s.trim())
+    .filter(Boolean)
   submitting.value = true
   try {
     const tags = form.tags.map((t) => t.trim()).filter(Boolean)

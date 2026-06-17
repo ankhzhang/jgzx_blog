@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from .comment_serializers import CommentCreateSerializer, CommentTreeItemSerializer
 from .models import Project, ProjectCommentReadState, ProjectThreadComment
+from .project_visibility import is_project_publicly_visible
 
 
 def _get_visible_project(request, pk):
@@ -16,9 +17,7 @@ def _get_visible_project(request, pk):
     if request.user and request.user.is_authenticated:
         if request.user.is_staff or request.user.id == obj.publisher_id:
             return obj
-    if obj.status == 'published':
-        return obj
-    if obj.status in ('recruit_full', 'ended') and obj.is_visible_when_ended:
+    if is_project_publicly_visible(obj):
         return obj
     return None
 

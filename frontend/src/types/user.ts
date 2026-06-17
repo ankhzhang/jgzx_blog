@@ -3,7 +3,8 @@
  * 完全适配后端 UserProfileSerializer
  */
 export interface UserProfile {
-  id: number
+  id: number              // UserProfile 主键
+  user_id: number         // auth_user 主键，与 publisher_id 一致
   username: string        // 学号/工号
   real_name: string       // 真实姓名
   nick_name: string       // 昵称

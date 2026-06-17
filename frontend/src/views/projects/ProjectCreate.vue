@@ -68,20 +68,14 @@
         <el-form-item label="技能要求" prop="skill_requirements">
           <div class="skill-editor">
             <div
-              v-for="(item, index) in form.skill_requirements"
+              v-for="(_item, index) in form.skill_requirements"
               :key="index"
               class="skill-row"
             >
               <el-input
-                v-model="(item as { desc: string; count: number }).desc"
-                placeholder="如：会 Python，大二优先"
+                v-model="form.skill_requirements[index]"
+                placeholder="如：Python、C++、深度学习基础"
                 style="flex: 1; margin-right: 8px"
-              />
-              <el-input-number
-                v-model="(item as { desc: string; count: number }).count"
-                :min="1"
-                :max="10"
-                style="width: 100px"
               />
               <el-button
                 type="danger"
@@ -95,7 +89,7 @@
               v-if="form.skill_requirements.length < 10"
               type="primary"
               link
-              @click="form.skill_requirements.push({ desc: '', count: 1 })"
+              @click="form.skill_requirements.push('')"
             >
               + 添加一条
             </el-button>
@@ -135,13 +129,13 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { projectAPI } from '@/api/project'
-import type { ProjectCreateUpdatePayload, SkillItem } from '@/types/project'
+import type { ProjectCreateUpdatePayload } from '@/types/project'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
 
-const form = reactive<ProjectCreateUpdatePayload & { skill_requirements: { desc: string; count: number }[]; tags: string[] }>({
+const form = reactive<ProjectCreateUpdatePayload & { skill_requirements: string[]; tags: string[] }>({
   title: '',
   description: '',
   category: 'teacher_research',
@@ -185,16 +179,9 @@ async function submit(isDraft: boolean) {
   } catch {
     return
   }
-  const skills: SkillItem[] = form.skill_requirements
-    .filter((s) => (s as { desc: string }).desc?.trim())
-    .map((s) => ({ desc: (s as { desc: string }).desc.trim(), count: (s as { count: number }).count }))
-  if (skills.length > 0) {
-    const total = skills.reduce((a, b) => a + (typeof b === 'object' && 'count' in b ? b.count : 1), 0)
-    if (total > form.recruit_count) {
-      ElMessage.warning('技能需求总人数不能超过招募人数')
-      return
-    }
-  }
+  const skills = form.skill_requirements
+    .map((s) => s.trim())
+    .filter(Boolean)
   submitting.value = true
   try {
     const tags = form.tags.map((t) => t.trim()).filter(Boolean)

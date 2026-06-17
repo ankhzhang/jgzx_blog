@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.db.models import Q
 
 from .models import Project
+from .project_visibility import is_project_publicly_visible, public_project_visibility_q
 from .serializers import (
     ProjectListSerializer,
     ProjectDetailSerializer,
@@ -43,11 +44,8 @@ class ProjectQuerysetMixin:
         if request.user and request.user.is_staff:
             return qs
 
-        # 公开：published 或 (recruit_full/ended 且 is_visible_when_ended)
-        qs = qs.filter(
-            Q(status='published')
-            | (Q(status__in=['recruit_full', 'ended']) & Q(is_visible_when_ended=True))
-        )
+        # 公开：招募中，或已结束且 is_visible_when_ended（含截止时间已过）
+        qs = qs.filter(public_project_visibility_q())
         return qs
 
 
@@ -123,9 +121,7 @@ class ProjectDetailView(views.APIView, ProjectQuerysetMixin):
             obj = Project.objects.select_related('publisher').get(pk=pk, deleted_at__isnull=True)
         except Project.DoesNotExist:
             return None
-        if obj.status == 'published':
-            return obj
-        if obj.status in ('recruit_full', 'ended') and obj.is_visible_when_ended:
+        if is_project_publicly_visible(obj):
             return obj
         if request.user and request.user.is_authenticated:
             if obj.publisher_id == request.user.id or request.user.is_staff:
