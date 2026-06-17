@@ -27,11 +27,18 @@ def public_project_visibility_q(*, now=None):
 
 
 def is_project_publicly_visible(project, *, now=None) -> bool:
-    """普通用户是否可在公开列表/详情查看该项目。"""
     if project.status not in ('published', 'recruit_full', 'ended'):
         return False
     now = now or timezone.now()
+
+    # 惰性更新：如果已发布且过了截止时间，自动更新为已结束
+    if project.status == 'published' and project.deadline <= now:
+        project.status = 'ended'
+        project.save(update_fields=['status', 'updated_at'])
+        return project.is_visible_when_ended
+
     if project.status == 'published' and project.deadline > now:
         return True
+
     ended = project.status in ('recruit_full', 'ended') or project.deadline <= now
     return ended and project.is_visible_when_ended

@@ -56,6 +56,10 @@ export const projectAPI = {
     return api.post<ProjectDetail>(`${BASE}/${id}/close-recruit/`, { target })
   },
 
+  resumeRecruit(id: number) {
+    return api.post<ProjectDetail>(`${BASE}/${id}/resume-recruit/`)
+  },
+
   offline(id: number, offline_reason: string) {
     return api.post<ProjectDetail>(`${BASE}/${id}/offline/`, { offline_reason })
   },

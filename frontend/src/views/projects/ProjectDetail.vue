@@ -25,32 +25,33 @@
               <span class="meta-text">截止 {{ formatDate(project.deadline) }}</span>
             </div>
             <div v-if="isOwnerOrAdmin" class="actions">
-              <el-button v-if="canEdit" @click="$router.push(`/projects/${project.id}/edit`)">
-                编辑
-              </el-button>
-              <template v-if="project.status === 'draft'">
-                <el-button type="primary" :loading="actionLoading" @click="doSubmit">提交审核</el-button>
-                <el-button type="danger" :loading="actionLoading" @click="doDelete">删除</el-button>
-              </template>
-              <template v-else-if="project.status === 'pending'">
-                <el-button :loading="actionLoading" @click="doWithdraw">撤回审核</el-button>
-              </template>
-              <template v-else-if="['published', 'recruit_full', 'ended'].includes(project.status)">
-                <el-button
-                  v-if="project.status === 'published'"
-                  :loading="actionLoading"
-                  @click="openCloseRecruit"
-                >
-                  关闭招募
-                </el-button>
-                <el-button @click="openVisibility">
-                  {{ project.is_visible_when_ended ? '设为结束不可见' : '设为结束可见' }}
-                </el-button>
-              </template>
-              <template v-if="project.status === 'offline' && isAdmin">
-                <el-button type="primary" :loading="actionLoading" @click="doRestore">恢复上架</el-button>
-              </template>
-            </div>
+  <el-button v-if="canEdit" @click="$router.push(`/projects/${project.id}/edit`)">
+    编辑
+  </el-button>
+  <template v-if="project.status === 'draft'">
+    <el-button type="primary" :loading="actionLoading" @click="doSubmit">提交审核</el-button>
+    <el-button type="danger" :loading="actionLoading" @click="doDelete">删除</el-button>
+  </template>
+  <template v-else-if="project.status === 'pending'">
+    <el-button :loading="actionLoading" @click="doWithdraw">撤回审核</el-button>
+  </template>
+  <template v-else-if="project.status === 'published'">
+    <el-button :loading="actionLoading" @click="doWithdraw">撤回为草稿</el-button>
+    <el-button :loading="actionLoading" @click="openCloseRecruit">关闭招募</el-button>
+  </template>
+  <template v-else-if="['recruit_full', 'ended'].includes(project.status)">
+    <el-button
+      v-if="project.status === 'recruit_full'"
+      :loading="actionLoading"
+      @click="doResumeRecruit"
+    >
+      恢复招募
+    </el-button>
+    <el-button @click="openVisibility">
+      {{ project.is_visible_when_ended ? '设为结束不可见' : '设为结束可见' }}
+    </el-button>
+  </template>
+</div>
           </div>
         </div>
 
@@ -102,7 +103,7 @@
       </el-radio-group>
       <template #footer>
         <el-button @click="closeRecruitVisible = false">取消</el-button>
-        <el-button type="primary" :loading="actionLoading" @click="doCloseRecruit">确定</el-button>
+        <el-button type="primary" @click="doCloseRecruit">确认</el-button>
       </template>
     </el-dialog>
 
@@ -151,7 +152,7 @@ const isOwnerOrAdmin = computed(() => {
 const canEdit = computed(() => {
   const p = project.value
   if (!p) return false
-  return ['draft', 'published'].includes(p.status)
+  return ['draft'].includes(p.status)
 })
 
 const skillList = computed(() => project.value?.skill_requirements ?? [])
@@ -249,6 +250,20 @@ async function doCloseRecruit() {
     project.value = res.data
     closeRecruitVisible.value = false
     ElMessage.success('已更新状态')
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function doResumeRecruit() {
+  if (!project.value) return
+  actionLoading.value = true
+  try {
+    const res = await projectAPI.resumeRecruit(project.value.id)
+    project.value = res.data
+    ElMessage.success('恢复招募成功')
+  } catch (e) {
+    ElMessage.error('操作失败')
   } finally {
     actionLoading.value = false
   }

@@ -4,6 +4,8 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .models import UserProfile
 from .serializers import (
     UserRegisterSerializer,
@@ -43,7 +45,7 @@ class BulkRegisterView(views.APIView):
             return Response(result, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+@method_decorator(csrf_exempt, name='dispatch')
 class LoginView(views.APIView):
 
     """用户登录"""

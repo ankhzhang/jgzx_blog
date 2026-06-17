@@ -40,6 +40,7 @@ urlpatterns = [
     path('projects/<int:pk>/approve/', projectviews.ProjectApproveView.as_view(), name='project-approve'),
     path('projects/<int:pk>/reject/', projectviews.ProjectRejectView.as_view(), name='project-reject'),
     path('projects/<int:pk>/close-recruit/', projectviews.ProjectCloseRecruitView.as_view(), name='project-close-recruit'),
+    path('projects/<int:pk>/resume-recruit/', projectviews.ResumeRecruitView.as_view(), name='project-resume-recruit'),
     path('projects/<int:pk>/offline/', projectviews.ProjectOfflineView.as_view(), name='project-offline'),
     path('projects/<int:pk>/restore/', projectviews.ProjectRestoreView.as_view(), name='project-restore'),
     path('projects/<int:pk>/visibility/', projectviews.ProjectVisibilityView.as_view(), name='project-visibility'),

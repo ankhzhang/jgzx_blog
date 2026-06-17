@@ -23,7 +23,10 @@ class ApiClient {
       baseURL: getApiBaseUrl(),
       timeout: 30000,  // 30秒超时
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',  // 禁用缓存
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
     })
 

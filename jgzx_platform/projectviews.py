@@ -151,9 +151,9 @@ class ProjectUpdateView(views.APIView):
             return Response({'error': '项目不存在'}, status=status.HTTP_404_NOT_FOUND)
         if not (request.user.is_staff or project.publisher_id == request.user.id):
             return Response({'error': '无权限修改'}, status=status.HTTP_403_FORBIDDEN)
-        if project.status not in ('draft', 'published'):
+        if project.status not in ('draft'):
             return Response(
-                {'error': '仅草稿或已发布状态可编辑正文'},
+                {'error': '仅草稿状态可编辑正文'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -201,18 +201,22 @@ class ProjectSubmitView(views.APIView):
 
 
 # ---------- 撤回审核 ----------
-class ProjectWithdrawView(views.APIView):
-    permission_classes = [permissions.IsAuthenticated, IsOwnerOrAdmin]
+class ProjectWithdrawView (views.APIView):
+    """撤回审核（支持草稿和已发布状态）"""
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
         try:
-            project = Project.objects.get(pk=pk, deleted_at__isnull=True)
+            project = Project.objects.get(id=pk)
         except Project.DoesNotExist:
             return Response({'error': '项目不存在'}, status=status.HTTP_404_NOT_FOUND)
-        if project.publisher_id != request.user.id and not request.user.is_staff:
+
+        if not (request.user.is_staff or project.publisher_id == request.user.id):
             return Response({'error': '无权限'}, status=status.HTTP_403_FORBIDDEN)
-        if project.status != 'pending':
-            return Response({'error': '仅待审可撤回'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 修改：允许草稿和已发布状态撤回
+        if project.status not in ('draft', 'pending', 'published'):
+            return Response({'error': '仅草稿/待审/已发布可撤回'}, status=status.HTTP_400_BAD_REQUEST)
 
         project.status = 'draft'
         project.version += 1
@@ -276,13 +280,38 @@ class ProjectCloseRecruitView(views.APIView):
             return Response({'error': '无权限'}, status=status.HTTP_403_FORBIDDEN)
         if project.status not in ('published', 'recruit_full', 'ended'):
             return Response({'error': '仅已发布/已招满/已结束可操作'}, status=status.HTTP_400_BAD_REQUEST)
-
+        # 添加：已结束状态不允许更改
+        if project.status == 'ended':
+            return Response({'error': '已结束状态不可更改'}, status=status.HTTP_400_BAD_REQUEST)
         body = CloseRecruitBodySerializer(data=request.data)
         if not body.is_valid():
             return Response(body.errors, status=status.HTTP_400_BAD_REQUEST)
         target = body.validated_data['target']
 
         project.status = target
+        project.version += 1
+        project.save(update_fields=['status', 'version', 'updated_at'])
+        return Response(ProjectDetailSerializer(project).data)
+
+
+class ResumeRecruitView(views.APIView):
+    """恢复招募（从已招满恢复到已发布）"""
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrAdmin]  # 添加 IsOwnerOrAdmin
+
+    def post(self, request, pk):
+        try:
+            project = Project.objects.get(pk=pk, deleted_at__isnull=True)  # 添加 deleted_at 检查
+        except Project.DoesNotExist:
+            return Response({'error': '项目不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not (request.user.is_staff or project.publisher_id == request.user.id):
+            return Response({'error': '无权限'}, status=status.HTTP_403_FORBIDDEN)
+
+        # 仅已招满状态可恢复
+        if project.status != 'recruit_full':
+            return Response({'error': '仅已招满状态可恢复招募'}, status=status.HTTP_400_BAD_REQUEST)
+
+        project.status = 'published'
         project.version += 1
         project.save(update_fields=['status', 'version', 'updated_at'])
         return Response(ProjectDetailSerializer(project).data)
