@@ -77,3 +77,47 @@ class CommentTreeReplySerializer(serializers.ModelSerializer):
         if not user or not user.is_authenticated:
             return False
         return user.is_staff or user.id == obj.author_id
+
+
+class MyCommentItemSerializer(serializers.ModelSerializer):
+    """个人评论中心列表项"""
+    author_name = serializers.CharField(source='author.first_name', read_only=True)
+    author_username = serializers.CharField(source='author.username', read_only=True)
+    project_title = serializers.CharField(source='project.title', read_only=True)
+    parent_content = serializers.SerializerMethodField()
+    parent_author_name = serializers.SerializerMethodField()
+    parent_author_username = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProjectThreadComment
+        fields = (
+            'id',
+            'project_id',
+            'parent_id',
+            'content',
+            'is_deleted',
+            'author_name',
+            'author_username',
+            'project_title',
+            'parent_content',
+            'parent_author_name',
+            'parent_author_username',
+            'created_at',
+            'updated_at',
+        )
+
+    def get_parent_content(self, obj):
+        if not obj.parent_id or not obj.parent:
+            return ''
+        text = obj.parent.content
+        return text[:80] + '...' if len(text) > 80 else text
+
+    def get_parent_author_name(self, obj):
+        if not obj.parent_id or not obj.parent:
+            return ''
+        return obj.parent.author.first_name or ''
+
+    def get_parent_author_username(self, obj):
+        if not obj.parent_id or not obj.parent:
+            return ''
+        return obj.parent.author.username

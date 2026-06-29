@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django import forms
 
-from .models import UserProfile, Project, Comment
+from .models import UserProfile, Project, ProjectThreadComment
 
 
 # ==================== 1. 内联管理 ====================
@@ -285,87 +285,121 @@ class ProjectAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context=extra_context)
 
 
-# ==================== 4. 评论审核 Admin ====================
+# ==================== 4. 评论管理 Admin ====================
 
-@admin.register(Comment)
+# 后台展示实际业务评论表（ProjectThreadComment），与前端 API 一致
+ProjectThreadComment._meta.verbose_name = '评论'
+ProjectThreadComment._meta.verbose_name_plural = '评论'
+
+
+@admin.register(ProjectThreadComment)
 class CommentAdmin(admin.ModelAdmin):
-    """评论管理后台，支持审核流"""
+    """评论管理后台"""
 
-    # 列表显示
-    list_display = ('short_content', 'author', 'project', 'status_colored', 'created_at')
-    list_filter = ('status', 'created_at')
+    list_display = (
+        'short_content', 'author_info', 'author_nickname', 'project_title',
+        'comment_type', 'status_colored', 'created_at', 'deleted_by', 'deleted_at',
+    )
+    list_filter = ('is_deleted', 'created_at')
+    search_fields = (
+        'content', 'author__username', 'author__first_name', 'author__last_name',
+        'project__title',
+    )
+    date_hierarchy = 'created_at'
 
-    # 搜索功能（全局搜索）
-    search_fields = ('content', 'author__username', 'author__first_name', 'project__title')
-
-    # 字段分组
     fieldsets = (
         ('基本信息', {
-            'fields': ('project', 'author', 'content')
+            'fields': ('project', 'author', 'parent', 'content')
         }),
-        ('审核信息', {
-            'fields': ('status', 'reject_reason', 'reviewed_by', 'reviewed_at'),
+        ('删除信息', {
+            'fields': ('is_deleted', 'deleted_at', 'deleted_by'),
             'classes': ('collapse',)
         }),
     )
 
-    # 只读字段
-    readonly_fields = ('reviewed_by', 'reviewed_at', 'created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'deleted_at')
 
-    # 批量操作
-    actions = ['approve_comments', 'reject_comments']
+    actions = ['soft_delete_comments', 'restore_comments']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'author', 'project', 'parent', 'deleted_by'
+        )
 
     def short_content(self, obj):
         """截断显示评论内容"""
         return obj.content[:50] + '...' if len(obj.content) > 50 else obj.content
     short_content.short_description = '评论内容'
 
+    def author_info(self, obj):
+        """显示用户名+真实姓名"""
+        username = obj.author.username
+        real_name = obj.author.last_name
+        if real_name:
+            return f"{username} ({real_name})"
+        return username
+    author_info.short_description = '评论者'
+
+    def author_nickname(self, obj):
+        """显示昵称"""
+        return obj.author.first_name
+    author_nickname.short_description = '昵称'
+
+    def project_title(self, obj):
+        """显示所属项目标题"""
+        return obj.project.title
+    project_title.short_description = '所属项目'
+
+    def comment_type(self, obj):
+        """显示评论层级"""
+        if obj.parent_id:
+            return f'回复 #{obj.parent_id}'
+        return '一级评论'
+    comment_type.short_description = '类型'
+
     def status_colored(self, obj):
         """带徽章样式的状态显示"""
-        badges = {
-            'pending': ('#fd7e14', '⏳'),
-            'approved': ('#28a745', '✅'),
-            'rejected': ('#dc3545', '❌')
-        }
-        status_names = dict(Comment.STATUS_CHOICES)
-        color, icon = badges.get(obj.status, ('#6c757d', '❓'))
+        if obj.is_deleted:
+            return format_html(
+                '<span style="background: #dc3545; color: white; padding: 4px 10px; '
+                'border-radius: 12px; font-size: 12px; font-weight: 500; display: inline-block;">'
+                '🚫 已删除</span>'
+            )
         return format_html(
-            '<span style="background: {}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; display: inline-block;">{} {}</span>',
-            color, icon, status_names.get(obj.status, obj.status)
+            '<span style="background: #28a745; color: white; padding: 4px 10px; '
+            'border-radius: 12px; font-size: 12px; font-weight: 500; display: inline-block;">'
+            '✅ 正常</span>'
         )
-    status_colored.short_description = '审核状态'
+    status_colored.short_description = '状态'
 
-    # ===== 一键批复操作 =====
-
-    @admin.action(description='✅ 通过选中评论')
-    def approve_comments(self, request, queryset):
-        """批量通过评论"""
+    @admin.action(description='🚫 删除选中评论')
+    def soft_delete_comments(self, request, queryset):
+        """批量软删除评论"""
         count = 0
-        for comment in queryset.filter(status='pending'):
-            comment.status = 'approved'
-            comment.reviewed_by = request.user
-            comment.reviewed_at = timezone.now()
-            comment.save()
+        for comment in queryset.filter(is_deleted=False):
+            comment.is_deleted = True
+            comment.deleted_at = timezone.now()
+            comment.deleted_by = request.user
+            comment.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
             count += 1
-        self.message_user(request, f'已成功通过 {count} 条评论', messages.SUCCESS)
+        self.message_user(request, f'已成功删除 {count} 条评论', messages.SUCCESS)
 
-    @admin.action(description='❌ 驳回选中评论')
-    def reject_comments(self, request, queryset):
-        """批量驳回评论"""
+    @admin.action(description='♻️ 恢复选中评论')
+    def restore_comments(self, request, queryset):
+        """批量恢复已删除评论"""
         count = 0
-        for comment in queryset.filter(status='pending'):
-            comment.status = 'rejected'
-            comment.reject_reason = '内容违规'
-            comment.reviewed_by = request.user
-            comment.reviewed_at = timezone.now()
-            comment.save()
+        for comment in queryset.filter(is_deleted=True):
+            comment.is_deleted = False
+            comment.deleted_at = None
+            comment.deleted_by = None
+            comment.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
             count += 1
-        self.message_user(request, f'已成功驳回 {count} 条评论', messages.WARNING)
+        self.message_user(request, f'已成功恢复 {count} 条评论', messages.SUCCESS)
 
     def changelist_view(self, request, extra_context=None):
-        """自定义列表视图，显示待审核数量"""
+        """自定义列表视图，显示活跃评论数量"""
         extra_context = extra_context or {}
-        extra_context['pending_count'] = Comment.objects.filter(status='pending').count()
+        extra_context['pending_count'] = ProjectThreadComment.objects.filter(is_deleted=False).count()
         return super().changelist_view(request, extra_context=extra_context)
 
 
@@ -381,8 +415,8 @@ class CustomAdminSite(AdminSite):
         extra_context.update({
             'project_total': Project.objects.count(),
             'project_pending': Project.objects.filter(status='pending').count(),
-            'comment_total': Comment.objects.count(),
-            'comment_pending': Comment.objects.filter(status='pending').count(),
+            'comment_total': ProjectThreadComment.objects.filter(is_deleted=False).count(),
+            'comment_pending': ProjectThreadComment.objects.filter(is_deleted=True).count(),
             'user_total': User.objects.count(),
             'user_staff': User.objects.filter(is_staff=True).count(),
         })

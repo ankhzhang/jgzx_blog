@@ -49,6 +49,12 @@ const routes = [
     }
   },
   {
+    path: '/comments',
+    name: 'myComments',
+    component: () => import('@/views/comments/MyComments.vue'),
+    meta: { title: '我的评论', requiresAuth: true }
+  },
+  {
     path: '/projects',
     name: 'projects',
     component: () => import('@/views/projects/ProjectList.vue'),

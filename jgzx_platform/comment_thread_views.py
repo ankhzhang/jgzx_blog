@@ -4,7 +4,11 @@ from django.utils import timezone
 from rest_framework import permissions, status, views
 from rest_framework.response import Response
 
-from .comment_serializers import CommentCreateSerializer, CommentTreeItemSerializer
+from .comment_serializers import (
+    CommentCreateSerializer,
+    CommentTreeItemSerializer,
+    MyCommentItemSerializer,
+)
 from .models import Project, ProjectCommentReadState, ProjectThreadComment
 from .project_visibility import is_project_publicly_visible
 
@@ -112,6 +116,32 @@ class ProjectCommentDeleteView(views.APIView):
         comment.deleted_by = request.user
         comment.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MyCommentListView(views.APIView):
+    """当前用户的个人评论中心：我发表的评论 + 别人回复我的评论"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        try:
+            my_comments = ProjectThreadComment.objects.filter(
+                author=user, is_deleted=False,
+            ).select_related('project', 'author', 'parent', 'parent__author').order_by('-created_at')
+
+            replies_to_me = ProjectThreadComment.objects.filter(
+                parent__author=user, is_deleted=False,
+            ).exclude(author=user).select_related(
+                'project', 'author', 'parent', 'parent__author',
+            ).order_by('-created_at')
+        except (ProgrammingError, OperationalError):
+            return Response({'my_comments': [], 'replies_to_me': []})
+
+        context = {'request': request}
+        return Response({
+            'my_comments': MyCommentItemSerializer(my_comments, many=True, context=context).data,
+            'replies_to_me': MyCommentItemSerializer(replies_to_me, many=True, context=context).data,
+        })
 
 
 class CommentUnreadCountView(views.APIView):
