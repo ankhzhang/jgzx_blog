@@ -47,6 +47,7 @@ urlpatterns = [
     path('projects/<int:pk>/delete/', projectviews.ProjectDeleteView.as_view(), name='project-delete'),
     path('projects/<int:project_id>/comments/', comment_thread_views.ProjectCommentListCreateView.as_view(), name='project-comment-list-create'),
     path('comments/mine/', comment_thread_views.MyCommentListView.as_view(), name='comment-mine'),
+    path('comments/replies/mark-read/', comment_thread_views.CommentRepliesMarkReadView.as_view(), name='comment-replies-mark-read'),
     path('comments/<int:comment_id>/delete/', comment_thread_views.ProjectCommentDeleteView.as_view(), name='project-comment-delete'),
     path('comments/unread-count/', comment_thread_views.CommentUnreadCountView.as_view(), name='comment-unread-count'),
     path('projects/<int:project_id>/comments/mark-read/', comment_thread_views.ProjectCommentMarkReadView.as_view(), name='project-comment-mark-read'),

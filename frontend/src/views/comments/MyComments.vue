@@ -10,8 +10,11 @@
     </el-card>
 
     <el-card v-loading="loading" class="list-card">
-      <el-tabs v-model="activeTab">
-        <el-tab-pane :label="`我发表的 (${myComments.length})`" name="mine">
+      <el-tabs v-model="activeTab" @tab-change="onTabChange">
+        <el-tab-pane name="mine">
+          <template #label>
+            <span class="tab-label">我发表的 ({{ myComments.length }})</span>
+          </template>
           <template v-if="myComments.length === 0">
             <el-empty description="还没有发表过评论">
               <el-button type="primary" @click="$router.push('/projects')">去项目广场看看</el-button>
@@ -44,7 +47,13 @@
           </div>
         </el-tab-pane>
 
-        <el-tab-pane :label="`收到的回复 (${repliesToMe.length})`" name="replies">
+        <el-tab-pane name="replies">
+          <template #label>
+            <span class="tab-label">
+              收到的回复 ({{ repliesToMe.length }})
+              <span v-if="unreadReplyCount > 0" class="tab-dot" />
+            </span>
+          </template>
           <template v-if="repliesToMe.length === 0">
             <el-empty description="暂无他人回复" />
           </template>
@@ -74,6 +83,36 @@
             </div>
           </div>
         </el-tab-pane>
+
+        <el-tab-pane name="project_new">
+          <template #label>
+            <span class="tab-label">
+              我项目下的新增评论 ({{ projectNewComments.length }})
+              <span v-if="unreadProjectCommentCount > 0" class="tab-dot" />
+            </span>
+          </template>
+          <template v-if="projectNewComments.length === 0">
+            <el-empty description="暂无新增评论" />
+          </template>
+          <div v-else class="comment-list">
+            <div
+              v-for="item in projectNewComments"
+              :key="item.project_id"
+              class="comment-card project-new-card"
+            >
+              <div class="card-header flex-between">
+                <span class="project-title">{{ item.project_title }}</span>
+                <el-tag type="danger" size="small">{{ item.unread_count }} 条新评论</el-tag>
+              </div>
+              <div class="card-footer">
+                <span class="hint-text">点击查看项目中的评论</span>
+                <el-button type="primary" link @click="goProject(item.project_id)">
+                  查看项目
+                </el-button>
+              </div>
+            </div>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </el-card>
   </div>
@@ -84,13 +123,17 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { commentAPI } from '@/api/comment'
 import { formatDate } from '@/utils'
-import type { MyCommentItem } from '@/types/comment'
+import type { MyCommentItem, ProjectNewCommentSummary } from '@/types/comment'
 
 const router = useRouter()
+
 const loading = ref(false)
 const activeTab = ref('mine')
 const myComments = ref<MyCommentItem[]>([])
 const repliesToMe = ref<MyCommentItem[]>([])
+const projectNewComments = ref<ProjectNewCommentSummary[]>([])
+const unreadProjectCommentCount = ref(0)
+const unreadReplyCount = ref(0)
 
 async function fetchList() {
   loading.value = true
@@ -98,11 +141,18 @@ async function fetchList() {
     const res = await commentAPI.getMyComments()
     myComments.value = res.data?.my_comments ?? []
     repliesToMe.value = res.data?.replies_to_me ?? []
-    if (myComments.value.length === 0 && repliesToMe.value.length > 0) {
-      activeTab.value = 'replies'
-    }
+    projectNewComments.value = res.data?.project_new_comments ?? []
+    unreadProjectCommentCount.value = res.data?.unread_project_comment_count ?? 0
+    unreadReplyCount.value = res.data?.unread_reply_count ?? 0
   } finally {
     loading.value = false
+  }
+}
+
+async function onTabChange(tabName: string | number) {
+  if (tabName === 'replies' && unreadReplyCount.value > 0) {
+    await commentAPI.markRepliesRead()
+    unreadReplyCount.value = 0
   }
 }
 
@@ -139,6 +189,21 @@ onMounted(fetchList)
   min-height: 320px;
 }
 
+.tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tab-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #f56c6c;
+  flex-shrink: 0;
+}
+
 .comment-list {
   display: flex;
   flex-direction: column;
@@ -160,6 +225,11 @@ onMounted(fetchList)
 
 .reply-card {
   border-left: 3px solid #409eff;
+}
+
+.project-new-card {
+  border-left: 3px solid #f56c6c;
+  cursor: default;
 }
 
 .card-header {
@@ -201,7 +271,8 @@ onMounted(fetchList)
   margin-top: 12px;
 }
 
-.time {
+.time,
+.hint-text {
   font-size: 12px;
   color: #909399;
 }

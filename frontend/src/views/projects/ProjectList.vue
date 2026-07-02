@@ -64,7 +64,7 @@
         </el-select>
         <el-input
           v-model="filters.q"
-          placeholder="搜索项目内容或评论"
+          placeholder="搜索项目标题、内容或标签"
           clearable
           style="width: 220px; margin-right: 12px"
           @keyup.enter="fetchList"

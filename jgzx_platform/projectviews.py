@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from django.db.models import Q
 
-from .models import Project, ProjectThreadComment
+from .models import Project
 from .project_visibility import is_project_publicly_visible, public_project_visibility_q
 from .serializers import (
     ProjectListSerializer,
@@ -83,21 +83,12 @@ class ProjectListCreateView(views.APIView, ProjectQuerysetMixin):
         if tag:
             qs = qs.filter(tags__contains=[tag])
         if keyword:
-            comment_project_ids = ProjectThreadComment.objects.filter(
-                content__icontains=keyword,
-                is_deleted=False,
-            ).values('project_id')
             qs = qs.filter(
                 Q(title__icontains=keyword)
                 | Q(description__icontains=keyword)
-                | Q(contact_info__icontains=keyword)
-                | Q(publisher__username__icontains=keyword)
-                | Q(publisher__first_name__icontains=keyword)
-                | Q(publisher__last_name__icontains=keyword)
                 | Q(tags__icontains=keyword)
                 | Q(skill_requirements__icontains=keyword)
-                | Q(id__in=comment_project_ids)
-            ).distinct()
+            )
 
         qs = qs.order_by('-created_at')[:200]
         serializer = ProjectListSerializer(qs, many=True)
