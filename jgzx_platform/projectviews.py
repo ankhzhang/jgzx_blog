@@ -408,8 +408,10 @@ class ProjectDeleteView(views.APIView):
             return Response({'error': '无权限'}, status=status.HTTP_403_FORBIDDEN)
         if project.status != 'draft':
             return Response({'error': '仅草稿可删除'}, status=status.HTTP_400_BAD_REQUEST)
-
-        project.deleted_at = timezone.now()
-        project.deleted_by = request.user
-        project.save(update_fields=['deleted_at', 'deleted_by_id', 'updated_at'])
+        ## 软删除
+        # project.deleted_at = timezone.now()
+        # project.deleted_by = request.user
+        # project.save(update_fields=['deleted_at', 'deleted_by_id', 'updated_at'])
+        # 物理删除
+        project.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
