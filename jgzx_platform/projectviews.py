@@ -86,6 +86,8 @@ class ProjectListCreateView(views.APIView, ProjectQuerysetMixin):
             qs = qs.filter(
                 Q(title__icontains=keyword)
                 | Q(description__icontains=keyword)
+                | Q(tags__icontains=keyword)
+                | Q(skill_requirements__icontains=keyword)
             )
 
         qs = qs.order_by('-created_at')[:200]

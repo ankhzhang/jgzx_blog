@@ -261,6 +261,34 @@ class ProjectCommentReadState(models.Model):
         return f"owner={self.owner_id}, comment={self.comment_id}, read={self.is_read}"
 
 
+class CommentReplyReadState(models.Model):
+    """评论被回复时的未读提醒（通知被回复的评论作者）。"""
+
+    owner = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='comment_reply_read_states', verbose_name='被回复者'
+    )
+    comment = models.OneToOneField(
+        ProjectThreadComment,
+        on_delete=models.CASCADE,
+        related_name='reply_read_state',
+        verbose_name='回复评论',
+    )
+    is_read = models.BooleanField('是否已读', default=False)
+    read_at = models.DateTimeField('已读时间', null=True, blank=True)
+    created_at = models.DateTimeField('创建时间', auto_now_add=True)
+    updated_at = models.DateTimeField('更新时间', auto_now=True)
+
+    class Meta:
+        verbose_name = '回复未读状态'
+        verbose_name_plural = '回复未读状态'
+        indexes = [
+            models.Index(fields=['owner', 'is_read']),
+        ]
+
+    def __str__(self):
+        return f"owner={self.owner_id}, reply={self.comment_id}, read={self.is_read}"
+
+
 # ==================== 信号部分 ====================
 
 # 确保User一创建，Profile就会存在

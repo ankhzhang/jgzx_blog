@@ -12,8 +12,8 @@
             <router-link to="/">首页</router-link>
             <router-link to="/profile">个人资料</router-link>
             <router-link to="/projects">项目</router-link>
-            <router-link to="/projects">
-              消息
+            <router-link to="/comments">
+              评论
               <el-badge
                 v-if="notificationStore.unreadCommentCount > 0"
                 :value="notificationStore.unreadCommentCount"

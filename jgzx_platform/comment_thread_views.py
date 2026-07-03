@@ -1,11 +1,16 @@
 from django.db import transaction
+from django.db.models import Count
 from django.db import ProgrammingError, OperationalError
 from django.utils import timezone
 from rest_framework import permissions, status, views
 from rest_framework.response import Response
 
-from .comment_serializers import CommentCreateSerializer, CommentTreeItemSerializer
-from .models import Project, ProjectCommentReadState, ProjectThreadComment
+from .comment_serializers import (
+    CommentCreateSerializer,
+    CommentTreeItemSerializer,
+    MyCommentItemSerializer,
+)
+from .models import Project, ProjectCommentReadState, ProjectThreadComment, CommentReplyReadState
 from .project_visibility import is_project_publicly_visible
 
 
@@ -91,6 +96,13 @@ class ProjectCommentListCreateView(views.APIView):
                 is_read=False,
             )
 
+        if parent is not None and parent.author_id != request.user.id:
+            CommentReplyReadState.objects.create(
+                owner_id=parent.author_id,
+                comment=comment,
+                is_read=False,
+            )
+
         output = CommentTreeItemSerializer(comment, context={'request': request}).data
         return Response(output, status=status.HTTP_201_CREATED)
 
@@ -112,6 +124,80 @@ class ProjectCommentDeleteView(views.APIView):
         comment.deleted_by = request.user
         comment.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MyCommentListView(views.APIView):
+    """当前用户的个人评论中心"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        try:
+            my_comments = ProjectThreadComment.objects.filter(
+                author=user, is_deleted=False,
+            ).select_related('project', 'author', 'parent', 'parent__author').order_by('-created_at')
+
+            replies_to_me = ProjectThreadComment.objects.filter(
+                parent__author=user, is_deleted=False,
+            ).exclude(author=user).select_related(
+                'project', 'author', 'parent', 'parent__author',
+            ).order_by('-created_at')
+
+            project_new_comments = list(
+                ProjectCommentReadState.objects.filter(
+                    owner=user, is_read=False,
+                ).values('project_id', 'project__title').annotate(
+                    unread_count=Count('id'),
+                ).order_by('-unread_count')
+            )
+            project_new_comments = [
+                {
+                    'project_id': item['project_id'],
+                    'project_title': item['project__title'],
+                    'unread_count': item['unread_count'],
+                }
+                for item in project_new_comments
+            ]
+
+            unread_project_comment_count = ProjectCommentReadState.objects.filter(
+                owner=user, is_read=False,
+            ).count()
+            unread_reply_count = CommentReplyReadState.objects.filter(
+                owner=user, is_read=False,
+            ).count()
+        except (ProgrammingError, OperationalError):
+            return Response({
+                'my_comments': [],
+                'replies_to_me': [],
+                'project_new_comments': [],
+                'unread_project_comment_count': 0,
+                'unread_reply_count': 0,
+            })
+
+        context = {'request': request}
+        return Response({
+            'my_comments': MyCommentItemSerializer(my_comments, many=True, context=context).data,
+            'replies_to_me': MyCommentItemSerializer(replies_to_me, many=True, context=context).data,
+            'project_new_comments': project_new_comments,
+            'unread_project_comment_count': unread_project_comment_count,
+            'unread_reply_count': unread_reply_count,
+        })
+
+
+class CommentRepliesMarkReadView(views.APIView):
+    """将「收到的回复」全部标记为已读"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        try:
+            updated = CommentReplyReadState.objects.filter(
+                owner_id=request.user.id,
+                is_read=False,
+            ).update(is_read=True, read_at=timezone.now())
+        except (ProgrammingError, OperationalError):
+            updated = 0
+        return Response({'marked_count': updated})
 
 
 class CommentUnreadCountView(views.APIView):

@@ -63,9 +63,10 @@
           <el-option label="已结束" value="ended" />
         </el-select>
         <el-input
-          v-model="filters.tag"
-          placeholder="标签筛选（如 AI）"
-          style="width: 180px; margin-right: 12px"
+          v-model="filters.q"
+          placeholder="搜索项目标题、内容或标签"
+          clearable
+          style="width: 220px; margin-right: 12px"
           @keyup.enter="fetchList"
         />
         <el-button type="primary" @click="fetchList">查询</el-button>
@@ -134,13 +135,13 @@ const filters = reactive<{
   category: ProjectCategory | ''
   publisher_role: PublisherRole | ''
   status: ProjectStatus | ''
-  tag: string
+  q: string
 }>({
   top_category: 'all',
   category: '',
   publisher_role: '',
   status: '',
-  tag: ''
+  q: ''
 })
 
 function onTopCategoryChange() {
@@ -175,7 +176,7 @@ async function fetchList() {
       category: filters.category || undefined,
       publisher_role: filters.publisher_role || undefined,
       status: filters.status || undefined,
-      tag: filters.tag || undefined
+      q: filters.q.trim() || undefined
     })
     list.value = res.data ?? []
   } finally {
